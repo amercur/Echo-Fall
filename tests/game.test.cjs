@@ -25,6 +25,24 @@ test('solids block dash tunneling and prevent head-first ceiling penetration',()
   const {game,tick}=boot();game.startRun();game.loadRoom('belfry');Object.assign(game.player,{x:280,y:40});game.movePlayerX(250);assert.equal(game.player.x,323);
   Object.assign(game.player,{x:349,y:238,vy:-600});tick(.03);assert.ok(game.player.y>=230,'underside of the wall is solid');
 });
+test('holding toward either wall allows repeated tap jumps up the same wall',()=>{
+  for(const [x,key,side] of [[373,'a',-1],[498,'d',1]]){
+    const {game,tick,down,up}=boot();game.startRun();game.loadRoom('belfry');
+    Object.assign(game.player,{x,y:50,vy:100,inv:100});down(key);tick(.03);
+    assert.equal(game.player.wall,side);
+    for(let jump=0;jump<3;jump++){
+      const startY=game.player.y,startX=game.player.x;let maxDistance=0,returned=false;
+      down(' ');tick(.05);up(' ');
+      for(let step=0;step<48;step++){
+        game.update(1/120);maxDistance=Math.max(maxDistance,Math.abs(game.player.x-startX));
+        if(game.player.wall===side){returned=true;break;}
+      }
+      assert.ok(returned,'held input returns to the same wall within 0.45 seconds');
+      assert.ok(maxDistance<35,'push-off stays close enough for wall climbing');
+      assert.ok(game.player.y<startY-15,'each tap jump gains height');
+    }
+  }
+});
 test('the full belfry ascent is traversable with chained wall jumps and a final air dash',()=>{
   const {game}=boot();game.startRun();game.loadRoom('belfry');Object.assign(game.player,{x:410,y:215,grounded:true,inv:100});
   let aim=1,reached=false;

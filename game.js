@@ -148,7 +148,7 @@
     shots = []; particles = []; slash = []; ghosts = []; imprint = null; hitstop = 0;
     const spawn = z.spawns[entry] || z.spawns.default;
     Object.assign(player, {x:spawn[0],y:spawn[1],vx:0,vy:0,grounded:false,wall:0,wallTime:0,wallLock:0,dash:0,inv:.4,airDashUsed:false,double:false,attackHold:0,guardCharge:0,focus:0,parry:0,perfect:0,counter:0,drop:0});
-    Object.assign(player,{prevX:player.x,prevY:player.y,attackVisual:0,attackBuffer:0,dashBuffer:0,deflectBuffer:0,landing:0});
+    Object.assign(player,{prevX:player.x,prevY:player.y,attackVisual:0,attackBuffer:0,dashBuffer:0,deflectBuffer:0,landing:0,wallSteer:0});
     player.healUsed = !!cached?.healUsed;
     player.safe = {x:spawn[0],y:spawn[1]}; jumpBuffer = 0; coyote = 0;
     camera = clamp(player.x - 340, 0, Math.max(0,world.width-W)); cameraY = clamp(player.y-300,world.top,world.bottom-H);
@@ -456,7 +456,7 @@
     if(pressed.has('m')){showMap();return;}
     if(hitstop>0){hitstop=Math.max(0,hitstop-dt);return;}
     roomTime+=dt;
-    for(const k of ['inv','attackCd','attackVisual','landing','dashCd','dash','dashGrace','abilityCd','ward','parry','perfect','counter','parryCd','comboTime','wallTime','wallLock','drop','mendCd'])player[k]=Math.max(0,(player[k]||0)-dt);
+    for(const k of ['inv','attackCd','attackVisual','landing','dashCd','dash','dashGrace','abilityCd','ward','parry','perfect','counter','parryCd','comboTime','wallTime','wallLock','wallSteer','drop','mendCd'])player[k]=Math.max(0,(player[k]||0)-dt);
     player.attackBuffer=Math.max(0,player.attackBuffer-dt);
     if(pressed.has('r')){choice('Leave this body?','The run ends here. You will carry one decision into the next loop.<br>The body stays behind.',[{text:'TRANSFER',style:'danger',action:()=>die('You chose to leave.')},{text:'STAY',action:()=>{}}],'A VOLUNTARY END');return;}
     if(pressed.has('e')){const o=nearestInteraction(),previous=zoneId;if(o)interact(o);if(state!=='play'||zoneId!==previous)return;}
@@ -479,7 +479,7 @@
     if(player.wall&&!player.grounded){player.wallTime=.11;player.lastWall=player.wall;}
     if(jumpBuffer>0&&down&&player.grounded&&player.onPlatform){player.drop=.23;player.y+=3;player.grounded=false;jumpBuffer=0;coyote=0;}
     if(jumpBuffer>0) {
-      if(!player.grounded&&player.wallTime>0){player.vy=-570;player.vx=-(player.lastWall||player.wall)*380;player.dir=Math.sign(player.vx);player.wallLock=.18;player.wallTime=0;player.airDashUsed=false;player.double=false;jumpBuffer=0;coyote=0;player.wall=0;burst(player.x+11,player.y+24,C.cyan,8);}
+      if(!player.grounded&&player.wallTime>0){player.vy=-570;player.vx=-(player.lastWall||player.wall)*245;player.dir=Math.sign(player.vx);player.wallLock=.055;player.wallSteer=.35;player.wallTime=0;player.airDashUsed=false;player.double=false;jumpBuffer=0;coyote=0;player.wall=0;burst(player.x+11,player.y+24,C.cyan,8);}
       else if(coyote>0||(active('defiance')&&!player.double)){if(coyote<=0)player.double=true;player.vy=-600;player.grounded=false;jumpBuffer=0;coyote=0;tone(360,.06);burst(player.x+11,player.y+player.h,C.cyan,6,.5);}
     }
     player.dashBuffer=Math.max(0,(player.dashBuffer||0)-dt);
@@ -491,7 +491,8 @@
     if(player.dash>0){player.vx=player.dir*720;player.vy=0;particles.push({x:player.x+11,y:player.y+20,vx:0,vy:0,life:.25,max:.25,color:C.cyan,size:6});}
     else{
       const slow=player.guardCharge>.25||player.attackHold>.25?.58:1;
-      if(player.wallLock<=0)player.vx=approach(player.vx,move*265*slow,dt*(player.grounded?2200:1250));
+      // Brief push-off, then strong steering lets held input return to the same wall.
+      if(player.wallLock<=0)player.vx=approach(player.vx,move*265*slow,dt*(player.grounded?2200:player.wallSteer>0?2400:1250));
       player.vy=Math.min(830,player.vy+1450*dt);
       if(player.wall&&move===player.wall&&!player.grounded&&player.vy>95)player.vy=95;
     }
