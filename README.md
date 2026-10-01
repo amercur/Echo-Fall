@@ -12,7 +12,7 @@ npm start
 
 Then visit **http://127.0.0.1:4173**. The server only listens on your computer.
 
-In Windows PowerShell, use `npm.cmd start` (and `npm.cmd test`) if the PowerShell execution policy blocks `npm.ps1`. You can also run `node server.js` directly.
+In Windows PowerShell, use `npm.cmd start` and `npm.cmd test` if the PowerShell execution policy blocks `npm.ps1`. You can also run `node server.js` directly.
 
 | Action | Keys |
 |---|---|

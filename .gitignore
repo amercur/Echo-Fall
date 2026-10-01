@@ -6,11 +6,11 @@ node_modules/
 .work/
 art-review/
 
-# Blender backup files (keep the editable .blend source)
+# Blender backup files
 *.blend[0-9]*
 *.blend@
 
-# Intermediate frames; packed runtime atlases are tracked
+# Intermediate frames
 assets/frames/
 assets/bestiary-frames/
 assets/smooth-frames/
