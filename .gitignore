@@ -1,0 +1,29 @@
+# Installed development dependencies
+node_modules/
+
+# Local logs and temporary work
+*.log
+.work/
+art-review/
+
+# Blender backup files (keep the editable .blend source)
+*.blend[0-9]*
+*.blend@
+
+# Intermediate frames; packed runtime atlases are tracked
+assets/frames/
+assets/bestiary-frames/
+assets/smooth-frames/
+
+# Python and editor caches
+__pycache__/
+*.py[cod]
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example

@@ -1,0 +1,1560 @@
+{
+  "version": 2,
+  "start": "wake",
+  "areas": [
+    "THE WAKE",
+    "THE CRADLE",
+    "THE LAST GARDEN",
+    "THE CHOIR"
+  ],
+  "rooms": [
+    {
+      "id": "wake",
+      "name": "THE WAKE / SIGNAL WELL",
+      "area": 0,
+      "width": 1120,
+      "top": -80,
+      "bottom": 540,
+      "map": [
+        80,
+        210
+      ],
+      "ground": [
+        [
+          0,
+          452,
+          1120,
+          100
+        ]
+      ],
+      "platforms": [
+        [
+          265,
+          362,
+          140,
+          20
+        ],
+        [
+          455,
+          272,
+          145,
+          20
+        ],
+        [
+          660,
+          182,
+          170,
+          20
+        ]
+      ],
+      "solids": [],
+      "hazards": [],
+      "enemies": [],
+      "interactions": [
+        {
+          "id": "rest-wake",
+          "kind": "bench",
+          "x": 145,
+          "y": 425,
+          "label": "SIGNAL ANCHOR"
+        },
+        {
+          "id": "creature",
+          "kind": "creature",
+          "x": 440,
+          "y": 422,
+          "label": "THE WOUNDED"
+        },
+        {
+          "id": "wake-east",
+          "kind": "gate",
+          "x": 1060,
+          "y": 417,
+          "target": "procession",
+          "entry": "west",
+          "label": "PILGRIM CAUSEWAY"
+        },
+        {
+          "id": "wake-high",
+          "kind": "gate",
+          "x": 745,
+          "y": 147,
+          "target": "belfry",
+          "entry": "low",
+          "label": "CLIMB THE BELFRY"
+        },
+        {
+          "id": "wake-drain",
+          "kind": "gate",
+          "x": 700,
+          "y": 417,
+          "target": "cistern",
+          "entry": "west",
+          "label": "DESCEND TO THE CISTERN"
+        },
+        {
+          "id": "wake-return",
+          "kind": "gate",
+          "x": 935,
+          "y": 417,
+          "target": "observatory",
+          "entry": "west",
+          "label": "THE LONG WAY HOME",
+          "requires": "well-link"
+        }
+      ],
+      "spawns": {
+        "default": [
+          110,
+          412
+        ],
+        "east": [
+          1000,
+          412
+        ],
+        "high": [
+          730,
+          142
+        ],
+        "drain": [
+          690,
+          412
+        ]
+      },
+      "decor": [
+        [
+          "arch",
+          340,
+          452,
+          0.52
+        ]
+      ],
+      "tutorials": [
+        {
+          "x": 250,
+          "y": 315,
+          "text": "SPACE / JUMP    W + J / RISING CUT"
+        },
+        {
+          "x": 740,
+          "y": 95,
+          "text": "AN UPPER ROAD WAITS"
+        }
+      ]
+    },
+    {
+      "id": "belfry",
+      "name": "THE BELFRY / BROKEN ASCENT",
+      "area": 0,
+      "width": 970,
+      "top": -550,
+      "bottom": 540,
+      "map": [
+        80,
+        70
+      ],
+      "ground": [
+        [
+          0,
+          452,
+          970,
+          100
+        ]
+      ],
+      "platforms": [
+        [
+          210,
+          355,
+          140,
+          20
+        ],
+        [
+          335,
+          255,
+          165,
+          20
+        ],
+        [
+          570,
+          130,
+          140,
+          20
+        ],
+        [
+          570,
+          -85,
+          150,
+          20
+        ],
+        [
+          335,
+          -195,
+          155,
+          20
+        ],
+        [
+          570,
+          -360,
+          230,
+          22
+        ]
+      ],
+      "solids": [
+        [
+          345,
+          -360,
+          28,
+          590
+        ],
+        [
+          520,
+          -490,
+          28,
+          740
+        ]
+      ],
+      "hazards": [],
+      "enemies": [
+        {
+          "x": 690,
+          "type": "drone",
+          "floor": 160,
+          "left": 580,
+          "right": 820
+        }
+      ],
+      "interactions": [
+        {
+          "id": "belfry-low",
+          "kind": "gate",
+          "x": 65,
+          "y": 417,
+          "target": "wake",
+          "entry": "high",
+          "label": "RETURN TO THE WELL"
+        },
+        {
+          "id": "belfry-high",
+          "kind": "gate",
+          "x": 730,
+          "y": -395,
+          "target": "archive",
+          "entry": "west",
+          "label": "THE GLASS ARCHIVE"
+        },
+        {
+          "id": "belfry-cache",
+          "kind": "cache",
+          "x": 635,
+          "y": -120,
+          "label": "A RESONANCE VESSEL"
+        }
+      ],
+      "spawns": {
+        "default": [
+          120,
+          412
+        ],
+        "low": [
+          120,
+          412
+        ],
+        "high": [
+          720,
+          -400
+        ]
+      },
+      "decor": [
+        [
+          "spire",
+          820,
+          452,
+          0.55
+        ]
+      ],
+      "tutorials": [
+        {
+          "x": 435,
+          "y": 320,
+          "text": "HOLD TOWARD A WALL TO SLIDE"
+        },
+        {
+          "x": 435,
+          "y": 292,
+          "text": "SPACE / WALL JUMP \u2014 THEN TURN"
+        },
+        {
+          "x": 445,
+          "y": -270,
+          "text": "WALL JUMPS RESTORE YOUR AIR DASH"
+        }
+      ]
+    },
+    {
+      "id": "cistern",
+      "name": "THE CISTERN / HOLLOW ROOTS",
+      "area": 0,
+      "width": 1360,
+      "top": -80,
+      "bottom": 540,
+      "map": [
+        175,
+        350
+      ],
+      "ground": [
+        [
+          0,
+          330,
+          310,
+          215
+        ],
+        [
+          1140,
+          330,
+          220,
+          215
+        ]
+      ],
+      "platforms": [
+        [
+          345,
+          300,
+          90,
+          20
+        ],
+        [
+          1000,
+          270,
+          100,
+          20
+        ]
+      ],
+      "solids": [],
+      "hazards": [
+        [
+          310,
+          474,
+          830,
+          50
+        ]
+      ],
+      "enemies": [
+        {
+          "x": 635,
+          "type": "drone",
+          "floor": 365,
+          "left": 540,
+          "right": 730
+        },
+        {
+          "x": 970,
+          "type": "drone",
+          "floor": 350,
+          "left": 870,
+          "right": 1060
+        }
+      ],
+      "interactions": [
+        {
+          "id": "cistern-west",
+          "kind": "gate",
+          "x": 70,
+          "y": 295,
+          "target": "wake",
+          "entry": "drain",
+          "label": "RETURN TO THE WELL"
+        },
+        {
+          "id": "sluice-lever",
+          "kind": "lever",
+          "x": 1210,
+          "y": 295,
+          "label": "OPEN THE SLUICE",
+          "flag": "sluice"
+        },
+        {
+          "id": "cistern-east",
+          "kind": "gate",
+          "x": 1300,
+          "y": 295,
+          "target": "procession",
+          "entry": "low",
+          "label": "THE LOWER CAUSEWAY",
+          "requires": "sluice"
+        },
+        {
+          "id": "cistern-cache",
+          "kind": "cache",
+          "x": 1040,
+          "y": 235,
+          "label": "A RESONANCE VESSEL"
+        }
+      ],
+      "spawns": {
+        "default": [
+          90,
+          290
+        ],
+        "west": [
+          90,
+          290
+        ],
+        "east": [
+          1270,
+          290
+        ]
+      },
+      "decor": [
+        [
+          "arch",
+          1190,
+          330,
+          0.38
+        ]
+      ],
+      "tutorials": [
+        {
+          "x": 180,
+          "y": 235,
+          "text": "HOLD S + J IN THE AIR / POGO"
+        },
+        {
+          "x": 700,
+          "y": 245,
+          "text": "BOUNCES REFRESH JUMP AND AIR DASH"
+        }
+      ],
+      "pogo": [
+        [
+          500,
+          407,
+          25,
+          25
+        ],
+        [
+          670,
+          365,
+          25,
+          25
+        ],
+        [
+          840,
+          400,
+          25,
+          25
+        ]
+      ]
+    },
+    {
+      "id": "archive",
+      "name": "THE GLASS ARCHIVE / UNFILED LIVES",
+      "area": 0,
+      "width": 1160,
+      "top": -80,
+      "bottom": 540,
+      "map": [
+        290,
+        70
+      ],
+      "ground": [
+        [
+          0,
+          452,
+          1160,
+          100
+        ]
+      ],
+      "platforms": [
+        [
+          220,
+          355,
+          120,
+          20
+        ],
+        [
+          420,
+          260,
+          170,
+          20
+        ],
+        [
+          740,
+          170,
+          150,
+          20
+        ]
+      ],
+      "solids": [],
+      "hazards": [],
+      "enemies": [],
+      "interactions": [
+        {
+          "id": "archive-west",
+          "kind": "gate",
+          "x": 60,
+          "y": 417,
+          "target": "belfry",
+          "entry": "high",
+          "label": "THE BELFRY"
+        },
+        {
+          "id": "archive-echo",
+          "kind": "body",
+          "x": 480,
+          "y": 227,
+          "label": "THE SELF WHO WAITED",
+          "loop": "unknown"
+        },
+        {
+          "id": "archive-lever",
+          "kind": "lever",
+          "x": 980,
+          "y": 417,
+          "label": "UNLOCK THE ARCHIVE LIFT",
+          "flag": "archive-lift"
+        },
+        {
+          "id": "archive-east",
+          "kind": "gate",
+          "x": 1100,
+          "y": 417,
+          "target": "procession",
+          "entry": "high",
+          "label": "THE ARCHIVE LIFT",
+          "requires": "archive-lift"
+        },
+        {
+          "id": "archive-memory",
+          "kind": "gate",
+          "x": 805,
+          "y": 135,
+          "target": "lungs",
+          "entry": "archive",
+          "label": "THE BREATHING PASSAGE",
+          "memory": "defiance"
+        },
+        {
+          "id": "archive-rest",
+          "kind": "bench",
+          "x": 600,
+          "y": 425,
+          "label": "SIGNAL ANCHOR"
+        }
+      ],
+      "spawns": {
+        "default": [
+          100,
+          412
+        ],
+        "west": [
+          100,
+          412
+        ],
+        "east": [
+          1050,
+          412
+        ],
+        "memory": [
+          810,
+          130
+        ]
+      },
+      "decor": [
+        [
+          "arch",
+          490,
+          452,
+          0.58
+        ],
+        [
+          "spire",
+          950,
+          452,
+          0.4
+        ]
+      ],
+      "tutorials": [
+        {
+          "x": 785,
+          "y": 80,
+          "text": "THE DOOR EXISTS IF YOU REMEMBER OPENING IT"
+        }
+      ]
+    },
+    {
+      "id": "procession",
+      "name": "PILGRIM CAUSEWAY / THE DIVIDED ROAD",
+      "area": 0,
+      "width": 1590,
+      "top": -80,
+      "bottom": 540,
+      "map": [
+        290,
+        210
+      ],
+      "ground": [
+        [
+          0,
+          452,
+          1590,
+          100
+        ]
+      ],
+      "platforms": [
+        [
+          220,
+          352,
+          140,
+          20
+        ],
+        [
+          415,
+          252,
+          145,
+          20
+        ],
+        [
+          620,
+          152,
+          170,
+          20
+        ],
+        [
+          850,
+          252,
+          150,
+          20
+        ],
+        [
+          1060,
+          352,
+          140,
+          20
+        ]
+      ],
+      "solids": [],
+      "hazards": [],
+      "enemies": [
+        {
+          "x": 560,
+          "type": "sentinel",
+          "floor": 452,
+          "left": 460,
+          "right": 660
+        },
+        {
+          "x": 980,
+          "type": "lancer",
+          "floor": 452,
+          "left": 880,
+          "right": 1080
+        },
+        {
+          "x": 1220,
+          "type": "drone",
+          "floor": 265,
+          "left": 1140,
+          "right": 1340
+        }
+      ],
+      "interactions": [
+        {
+          "id": "procession-west",
+          "kind": "gate",
+          "x": 60,
+          "y": 417,
+          "target": "wake",
+          "entry": "east",
+          "label": "THE SIGNAL WELL"
+        },
+        {
+          "id": "procession-high",
+          "kind": "gate",
+          "x": 700,
+          "y": 117,
+          "target": "archive",
+          "entry": "east",
+          "label": "THE ARCHIVE LIFT",
+          "requires": "archive-lift"
+        },
+        {
+          "id": "procession-low",
+          "kind": "gate",
+          "x": 400,
+          "y": 417,
+          "target": "cistern",
+          "entry": "east",
+          "label": "THE OPEN SLUICE",
+          "requires": "sluice"
+        },
+        {
+          "id": "door",
+          "kind": "door",
+          "x": 1180,
+          "y": 407,
+          "label": "THE FORBIDDEN DOOR"
+        },
+        {
+          "id": "procession-east",
+          "kind": "gate",
+          "x": 1530,
+          "y": 417,
+          "target": "king",
+          "entry": "west",
+          "label": "THE COURT OF CERTAINTY"
+        }
+      ],
+      "spawns": {
+        "default": [
+          100,
+          412
+        ],
+        "west": [
+          100,
+          412
+        ],
+        "east": [
+          1460,
+          412
+        ],
+        "high": [
+          700,
+          112
+        ],
+        "low": [
+          420,
+          412
+        ]
+      },
+      "decor": [
+        [
+          "arch",
+          780,
+          452,
+          0.55
+        ],
+        [
+          "spire",
+          1380,
+          452,
+          0.52
+        ]
+      ],
+      "tutorials": [
+        {
+          "x": 580,
+          "y": 330,
+          "text": "F / DEFLECT \u2192 BUILD RESONANCE"
+        },
+        {
+          "x": 1020,
+          "y": 315,
+          "text": "RED ATTACK / JUMP OR RELEASE A CHARGED F"
+        },
+        {
+          "x": 1450,
+          "y": 315,
+          "text": "Q / IMPRINT A NEARBY FOE, THEN Q / DETONATE"
+        }
+      ]
+    },
+    {
+      "id": "king",
+      "name": "THE COURT / A FUTURE WITHOUT CHOICE",
+      "area": 0,
+      "width": 1280,
+      "top": -80,
+      "bottom": 540,
+      "map": [
+        480,
+        210
+      ],
+      "ground": [
+        [
+          0,
+          452,
+          1280,
+          100
+        ]
+      ],
+      "platforms": [
+        [
+          375,
+          342,
+          125,
+          20
+        ],
+        [
+          950,
+          342,
+          125,
+          20
+        ]
+      ],
+      "solids": [],
+      "hazards": [],
+      "enemies": [],
+      "interactions": [
+        {
+          "id": "king-west",
+          "kind": "gate",
+          "x": 65,
+          "y": 417,
+          "target": "procession",
+          "entry": "east",
+          "label": "THE CAUSEWAY"
+        },
+        {
+          "id": "king-east",
+          "kind": "gate",
+          "x": 1210,
+          "y": 417,
+          "target": "cradle",
+          "entry": "west",
+          "label": "DESCEND TO THE CRADLE",
+          "requires": "king"
+        }
+      ],
+      "spawns": {
+        "default": [
+          105,
+          412
+        ],
+        "west": [
+          105,
+          412
+        ],
+        "east": [
+          1170,
+          412
+        ]
+      },
+      "decor": [
+        [
+          "arch",
+          720,
+          452,
+          0.8
+        ],
+        [
+          "spire",
+          1080,
+          452,
+          0.6
+        ]
+      ],
+      "tutorials": [
+        {
+          "x": 130,
+          "y": 305,
+          "text": "HOLD H / SPEND RESONANCE TO MEND"
+        }
+      ],
+      "boss": "king",
+      "arena": [
+        265,
+        1120
+      ]
+    },
+    {
+      "id": "cradle",
+      "name": "THE CRADLE / THREADS OF MERCY",
+      "area": 1,
+      "width": 1470,
+      "top": -80,
+      "bottom": 540,
+      "map": [
+        670,
+        210
+      ],
+      "ground": [
+        [
+          0,
+          452,
+          1470,
+          100
+        ]
+      ],
+      "platforms": [
+        [
+          235,
+          352,
+          125,
+          20
+        ],
+        [
+          430,
+          252,
+          140,
+          20
+        ],
+        [
+          630,
+          152,
+          160,
+          20
+        ],
+        [
+          960,
+          352,
+          160,
+          20
+        ]
+      ],
+      "solids": [],
+      "hazards": [],
+      "enemies": [
+        {
+          "x": 1000,
+          "type": "lancer",
+          "floor": 452,
+          "left": 900,
+          "right": 1100
+        }
+      ],
+      "interactions": [
+        {
+          "id": "cradle-west",
+          "kind": "gate",
+          "x": 65,
+          "y": 417,
+          "target": "king",
+          "entry": "east",
+          "label": "THE COURT"
+        },
+        {
+          "id": "keeper",
+          "kind": "keeper",
+          "x": 400,
+          "y": 412,
+          "label": "THE KEEPER"
+        },
+        {
+          "id": "cradle-rest",
+          "kind": "bench",
+          "x": 820,
+          "y": 425,
+          "label": "SIGNAL ANCHOR"
+        },
+        {
+          "id": "cradle-high",
+          "kind": "gate",
+          "x": 710,
+          "y": 117,
+          "target": "lungs",
+          "entry": "low",
+          "label": "THE SUSPENDED LUNGS"
+        },
+        {
+          "id": "cradle-east",
+          "kind": "gate",
+          "x": 1400,
+          "y": 417,
+          "target": "mother",
+          "entry": "west",
+          "label": "THE IMMORTAL CHAMBER"
+        }
+      ],
+      "spawns": {
+        "default": [
+          110,
+          412
+        ],
+        "west": [
+          110,
+          412
+        ],
+        "east": [
+          1330,
+          412
+        ],
+        "high": [
+          700,
+          112
+        ]
+      },
+      "decor": [
+        [
+          "arch",
+          490,
+          452,
+          0.5
+        ],
+        [
+          "spire",
+          1280,
+          452,
+          0.48
+        ]
+      ],
+      "tutorials": []
+    },
+    {
+      "id": "lungs",
+      "name": "THE SUSPENDED LUNGS / CHOIR MACHINERY",
+      "area": 1,
+      "width": 1250,
+      "top": -320,
+      "bottom": 540,
+      "map": [
+        670,
+        70
+      ],
+      "ground": [
+        [
+          0,
+          452,
+          1250,
+          100
+        ]
+      ],
+      "platforms": [
+        [
+          180,
+          345,
+          140,
+          20
+        ],
+        [
+          360,
+          230,
+          160,
+          20
+        ],
+        [
+          650,
+          100,
+          180,
+          20
+        ],
+        [
+          960,
+          225,
+          130,
+          20
+        ]
+      ],
+      "solids": [
+        [
+          550,
+          -100,
+          30,
+          400
+        ],
+        [
+          750,
+          -260,
+          30,
+          300
+        ]
+      ],
+      "hazards": [],
+      "enemies": [
+        {
+          "x": 690,
+          "type": "drone",
+          "floor": 60,
+          "left": 615,
+          "right": 875
+        },
+        {
+          "x": 920,
+          "type": "sentinel",
+          "floor": 452,
+          "left": 820,
+          "right": 1020
+        }
+      ],
+      "interactions": [
+        {
+          "id": "lungs-low",
+          "kind": "gate",
+          "x": 60,
+          "y": 417,
+          "target": "cradle",
+          "entry": "high",
+          "label": "RETURN TO THE CRADLE"
+        },
+        {
+          "id": "echo",
+          "kind": "echo",
+          "x": 440,
+          "y": 195,
+          "label": "AN ABANDONED SELF"
+        },
+        {
+          "id": "lungs-archive",
+          "kind": "gate",
+          "x": 1020,
+          "y": 190,
+          "target": "archive",
+          "entry": "memory",
+          "label": "THE BREATHING PASSAGE",
+          "memory": "defiance"
+        },
+        {
+          "id": "lungs-lever",
+          "kind": "lever",
+          "x": 1100,
+          "y": 417,
+          "label": "RELEASE THE MAINTENANCE LIFT",
+          "flag": "lung-lift"
+        },
+        {
+          "id": "lungs-east",
+          "kind": "gate",
+          "x": 1190,
+          "y": 417,
+          "target": "mother",
+          "entry": "high",
+          "label": "THE MOTHER FROM ABOVE",
+          "requires": "lung-lift"
+        },
+        {
+          "id": "lungs-cache",
+          "kind": "cache",
+          "x": 710,
+          "y": 65,
+          "label": "A RESONANCE VESSEL"
+        }
+      ],
+      "spawns": {
+        "default": [
+          100,
+          412
+        ],
+        "low": [
+          100,
+          412
+        ],
+        "archive": [
+          1100,
+          185
+        ],
+        "east": [
+          1110,
+          412
+        ]
+      },
+      "decor": [
+        [
+          "spire",
+          1100,
+          452,
+          0.6
+        ]
+      ],
+      "tutorials": []
+    },
+    {
+      "id": "mother",
+      "name": "THE MOTHER / A FUTURE WITHOUT END",
+      "area": 1,
+      "width": 1370,
+      "top": -80,
+      "bottom": 540,
+      "map": [
+        860,
+        210
+      ],
+      "ground": [
+        [
+          0,
+          452,
+          1370,
+          100
+        ]
+      ],
+      "platforms": [
+        [
+          360,
+          342,
+          125,
+          20
+        ],
+        [
+          930,
+          342,
+          125,
+          20
+        ],
+        [
+          170,
+          205,
+          170,
+          20
+        ]
+      ],
+      "solids": [],
+      "hazards": [],
+      "enemies": [],
+      "interactions": [
+        {
+          "id": "mother-west",
+          "kind": "gate",
+          "x": 65,
+          "y": 417,
+          "target": "cradle",
+          "entry": "east",
+          "label": "THE CRADLE"
+        },
+        {
+          "id": "mother-high",
+          "kind": "gate",
+          "x": 230,
+          "y": 170,
+          "target": "lungs",
+          "entry": "east",
+          "label": "THE MAINTENANCE LIFT",
+          "requires": "lung-lift"
+        },
+        {
+          "id": "mother-east",
+          "kind": "gate",
+          "x": 1300,
+          "y": 417,
+          "target": "garden",
+          "entry": "west",
+          "label": "THE LAST GARDEN",
+          "requires": "mother"
+        }
+      ],
+      "spawns": {
+        "default": [
+          110,
+          412
+        ],
+        "west": [
+          110,
+          412
+        ],
+        "high": [
+          240,
+          165
+        ],
+        "east": [
+          1250,
+          412
+        ]
+      },
+      "decor": [
+        [
+          "arch",
+          770,
+          452,
+          0.75
+        ]
+      ],
+      "tutorials": [],
+      "boss": "mother",
+      "arena": [
+        350,
+        1200
+      ]
+    },
+    {
+      "id": "garden",
+      "name": "THE LAST GARDEN / A FIRST MORNING",
+      "area": 2,
+      "width": 1430,
+      "top": -80,
+      "bottom": 540,
+      "map": [
+        860,
+        350
+      ],
+      "ground": [
+        [
+          0,
+          452,
+          1430,
+          100
+        ]
+      ],
+      "platforms": [
+        [
+          260,
+          350,
+          160,
+          20
+        ],
+        [
+          540,
+          245,
+          160,
+          20
+        ],
+        [
+          930,
+          350,
+          150,
+          20
+        ]
+      ],
+      "solids": [],
+      "hazards": [],
+      "enemies": [],
+      "interactions": [
+        {
+          "id": "garden-west",
+          "kind": "gate",
+          "x": 65,
+          "y": 417,
+          "target": "mother",
+          "entry": "east",
+          "label": "THE CRADLE"
+        },
+        {
+          "id": "garden-rest",
+          "kind": "bench",
+          "x": 360,
+          "y": 425,
+          "label": "SIGNAL ANCHOR"
+        },
+        {
+          "id": "garden-high",
+          "kind": "gate",
+          "x": 620,
+          "y": 210,
+          "target": "observatory",
+          "entry": "east",
+          "label": "THE QUIET OBSERVATORY"
+        },
+        {
+          "id": "child",
+          "kind": "child",
+          "x": 1110,
+          "y": 417,
+          "label": "THE LAST CHILD"
+        },
+        {
+          "id": "garden-east",
+          "kind": "gate",
+          "x": 1370,
+          "y": 417,
+          "target": "choir",
+          "entry": "west",
+          "label": "THE CHOIR WAITS",
+          "requires": "child"
+        }
+      ],
+      "spawns": {
+        "default": [
+          110,
+          412
+        ],
+        "west": [
+          110,
+          412
+        ],
+        "east": [
+          1300,
+          412
+        ],
+        "high": [
+          620,
+          205
+        ]
+      },
+      "decor": [
+        [
+          "arch",
+          630,
+          452,
+          0.45
+        ],
+        [
+          "spire",
+          1310,
+          452,
+          0.33
+        ]
+      ],
+      "tutorials": []
+    },
+    {
+      "id": "observatory",
+      "name": "THE QUIET OBSERVATORY / ANOTHER WAY HOME",
+      "area": 2,
+      "width": 1050,
+      "top": -80,
+      "bottom": 540,
+      "map": [
+        480,
+        350
+      ],
+      "ground": [
+        [
+          0,
+          452,
+          1050,
+          100
+        ]
+      ],
+      "platforms": [
+        [
+          210,
+          350,
+          150,
+          20
+        ],
+        [
+          440,
+          245,
+          160,
+          20
+        ]
+      ],
+      "solids": [],
+      "hazards": [],
+      "enemies": [],
+      "interactions": [
+        {
+          "id": "observatory-east",
+          "kind": "gate",
+          "x": 980,
+          "y": 417,
+          "target": "garden",
+          "entry": "high",
+          "label": "THE GARDEN"
+        },
+        {
+          "id": "observatory-echo",
+          "kind": "body",
+          "x": 520,
+          "y": 212,
+          "label": "THE SELF WHO REMAINED",
+          "loop": "older"
+        },
+        {
+          "id": "well-lever",
+          "kind": "lever",
+          "x": 170,
+          "y": 417,
+          "label": "RECONNECT THE SIGNAL WELL",
+          "flag": "well-link"
+        },
+        {
+          "id": "observatory-west",
+          "kind": "gate",
+          "x": 65,
+          "y": 417,
+          "target": "wake",
+          "entry": "east",
+          "label": "THE WAY HOME",
+          "requires": "well-link"
+        },
+        {
+          "id": "observatory-cache",
+          "kind": "cache",
+          "x": 740,
+          "y": 417,
+          "label": "A RESONANCE VESSEL"
+        }
+      ],
+      "spawns": {
+        "default": [
+          900,
+          412
+        ],
+        "east": [
+          900,
+          412
+        ],
+        "west": [
+          100,
+          412
+        ]
+      },
+      "decor": [
+        [
+          "spire",
+          790,
+          452,
+          0.58
+        ]
+      ],
+      "tutorials": []
+    },
+    {
+      "id": "choir",
+      "name": "THE CHOIR / THE ORIGINAL MEMORY",
+      "area": 3,
+      "width": 1420,
+      "top": -80,
+      "bottom": 540,
+      "map": [
+        1050,
+        350
+      ],
+      "ground": [
+        [
+          0,
+          452,
+          1420,
+          100
+        ]
+      ],
+      "platforms": [
+        [
+          320,
+          350,
+          140,
+          20
+        ],
+        [
+          610,
+          245,
+          160,
+          20
+        ]
+      ],
+      "solids": [],
+      "hazards": [],
+      "enemies": [],
+      "interactions": [
+        {
+          "id": "choir-west",
+          "kind": "gate",
+          "x": 65,
+          "y": 417,
+          "target": "garden",
+          "entry": "east",
+          "label": "THE GARDEN"
+        },
+        {
+          "id": "choir",
+          "kind": "choir",
+          "x": 1100,
+          "y": 340,
+          "label": "REMEMBER THE BEGINNING"
+        }
+      ],
+      "spawns": {
+        "default": [
+          110,
+          412
+        ],
+        "west": [
+          110,
+          412
+        ]
+      },
+      "decor": [
+        [
+          "spire",
+          420,
+          452,
+          0.55
+        ],
+        [
+          "spire",
+          1290,
+          452,
+          0.55
+        ]
+      ],
+      "tutorials": []
+    }
+  ]
+}

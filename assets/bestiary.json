@@ -1,0 +1,142 @@
+{
+  "sentinel": {
+    "file": "assets/sentinel.png",
+    "cell": 256,
+    "columns": 4,
+    "anchor": [
+      118.597,
+      202.719
+    ],
+    "scale": 0.34,
+    "states": {
+      "walk": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "tell": [
+        4,
+        5
+      ],
+      "strike": [
+        6
+      ],
+      "recover": [
+        7
+      ]
+    }
+  },
+  "lancer": {
+    "file": "assets/lancer.png",
+    "cell": 256,
+    "columns": 4,
+    "anchor": [
+      118.597,
+      202.719
+    ],
+    "scale": 0.34,
+    "states": {
+      "walk": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "tell": [
+        4,
+        5
+      ],
+      "strike": [
+        6
+      ],
+      "recover": [
+        7
+      ]
+    }
+  },
+  "drone": {
+    "file": "assets/drone.png",
+    "cell": 256,
+    "columns": 4,
+    "anchor": [
+      118.597,
+      202.719
+    ],
+    "scale": 0.34,
+    "states": {
+      "walk": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "tell": [
+        4,
+        5
+      ],
+      "strike": [
+        6
+      ],
+      "recover": [
+        7
+      ]
+    }
+  },
+  "king": {
+    "file": "assets/king.png",
+    "cell": 256,
+    "columns": 4,
+    "anchor": [
+      118.597,
+      202.719
+    ],
+    "scale": 0.65,
+    "states": {
+      "walk": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "tell": [
+        4,
+        5
+      ],
+      "strike": [
+        6
+      ],
+      "recover": [
+        7
+      ]
+    }
+  },
+  "mother": {
+    "file": "assets/mother.png",
+    "cell": 256,
+    "columns": 4,
+    "anchor": [
+      118.597,
+      202.719
+    ],
+    "scale": 0.65,
+    "states": {
+      "walk": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "tell": [
+        4,
+        5
+      ],
+      "strike": [
+        6
+      ],
+      "recover": [
+        7
+      ]
+    }
+  }
+}

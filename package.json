@@ -1,0 +1,18 @@
+{
+  "name": "echo-fall",
+  "version": "0.4.0",
+  "private": true,
+  "description": "A browser action-platformer about decisions that survive death.",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/game.test.cjs",
+    "check": "node --check game.js",
+    "review": "node tools/render_review.cjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "^1.0.9"
+  }
+}
