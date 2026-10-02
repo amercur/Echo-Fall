@@ -37,8 +37,13 @@
     respect: { name: 'The voice I heard', icon: '∞', short: 'KINSHIP', color: C.cyan, desc: 'L · Ask your Echo to strike beside you. It answers by choice.', world: 'The abandoned may listen. Ask the Archive guardian for passage.', ability: 'echo' },
     abandon: { name: 'The self I abandoned', icon: '∅', short: 'DISTANCE', color: '#a2b3db', desc: 'Dash recharges twice as fast. L · Become untouchable briefly.', world: 'Your old bodies remember which way you walked.', ability: 'phase' }
   };
+  const styles={
+    needle:{name:'NEEDLE / Bellkeeper form',color:'#a5dfff',desc:'Fast, narrow thrusts with long reach. A charged thrust reaches farther; precise spacing matters.',reach:108,speed:.76,damage:.78,heavyReach:145},
+    crescent:{name:'CRESCENT / Gardener form',color:'#b4ecc1',desc:'Wide sweeping cuts. The third strike and charged cut hit both sides; slower recovery leaves an opening.',reach:82,speed:1.15,damage:.95,heavyReach:112},
+    breaker:{name:'BREAKER / Engine form',color:'#ffbc83',desc:'Short, weighty blows. Every strike staggers; the charged smash cracks guards. Commit to the longer recovery.',reach:53,speed:1.48,damage:1.4,heavyReach:78}
+  };
   function readSave() {
-    const fresh = { version: 1, loop: 1, archive: [], active: null, bodies: [], endings: [], respect: 0 };
+    const fresh = { version: 1, loop: 1, archive: [], active: null, bodies: [], endings: [], respect: 0, styles: [], style: null };
     try {
       const s = JSON.parse(localStorage.getItem(SAVE_KEY));
       if (!s || s.version !== 1) return fresh;
@@ -48,6 +53,8 @@
       s.bodies = Array.isArray(s.bodies) ? s.bodies.filter(b => Number.isFinite(b.x) && Number.isFinite(b.room)).slice(-7) : [];
       s.endings = Array.isArray(s.endings) ? s.endings.filter(x => ['RESET','BREAK','REMEMBER','SHARE'].includes(x)) : [];
       s.respect = Number.isFinite(s.respect) ? s.respect : 0;
+      s.styles=Array.isArray(s.styles)?[...new Set(s.styles.filter(id=>Object.hasOwn(styles,id)))]:[];
+      s.style=s.styles.includes(s.style)?s.style:null;
       return { ...fresh, ...s };
     } catch { return fresh; }
   }
@@ -90,6 +97,75 @@
     const source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain();source.buffer=buffer;filter.type='lowpass';filter.frequency.value=cutoff;
     gain.gain.setValueAtTime(.0001,audio.currentTime);gain.gain.exponentialRampToValueAtTime(volume,audio.currentTime+.008);gain.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+duration);
     source.connect(filter);filter.connect(gain);gain.connect(mix.sfx);source.start();source.stop(audio.currentTime+duration);
+  }
+  // Each layer is [wave, start Hz, end Hz, seconds, gain, delay]. Noise layers
+  // sweep a filter instead of an oscillator, adding cloth, steel and impact texture.
+  const combatSounds={
+    slash1:[['noise',3800,900,.12,.10,0],['triangle',520,180,.09,.045,0]],
+    slash2:[['noise',1800,5200,.15,.085,0],['triangle',310,690,.12,.04,0]],
+    slash3:[['noise',4600,500,.23,.12,0],['triangle',180,55,.19,.085,.02],['sine',960,420,.13,.025,0]],
+    heavy:[['noise',2400,180,.34,.15,0],['triangle',115,38,.3,.12,.02],['sine',720,95,.2,.055,0]],
+    rising:[['noise',700,6000,.2,.10,0],['sine',260,1100,.18,.05,0]],
+    downstrike:[['noise',5500,350,.17,.11,0],['triangle',680,100,.16,.065,0]],
+    pogo:[['triangle',210,780,.12,.07,0],['sine',1450,980,.22,.04,.025]],
+    guard:[['noise',5200,2400,.045,.04,0],['sine',1450,1250,.09,.025,0]],
+    counterRelease:[['noise',800,4200,.21,.07,0],['triangle',240,960,.18,.065,0]],
+    deflect:[['noise',8500,3200,.065,.10,0],['sine',1760,1690,.38,.085,0],['sine',2637,2490,.26,.045,.008]],
+    counter:[['noise',6500,650,.15,.12,0],['triangle',140,45,.24,.10,0],['sine',1320,1290,.55,.08,0],['sine',1980,1930,.42,.055,.025]],
+    block:[['noise',1700,420,.09,.085,0],['triangle',290,90,.12,.08,0]],
+    hurt:[['noise',1300,180,.22,.11,0],['triangle',110,36,.25,.11,0]],
+    hit:[['noise',4200,850,.075,.085,0],['triangle',165,65,.10,.065,0]],
+    heavyHit:[['noise',3200,320,.13,.11,0],['triangle',90,32,.21,.10,0]],
+    shatter:[['noise',6500,1400,.28,.08,0],['sine',1200,330,.3,.035,.025]],
+    armor:[['noise',5800,2100,.05,.065,0],['sine',2300,2150,.23,.055,0],['sine',3270,3100,.12,.025,0]],
+    firebolt:[['noise',650,4400,.23,.11,0],['triangle',150,60,.2,.055,0]],
+    reflect:[['sine',2100,3100,.18,.045,0],['noise',6400,1100,.09,.045,0]],
+    imprint:[['sine',360,720,.19,.065,0],['sine',1080,1080,.3,.045,.09],['sine',1440,1440,.25,.045,.17]],
+    detonate:[['noise',5600,120,.55,.16,0],['triangle',130,30,.5,.14,0],['sine',960,160,.42,.06,.025]],
+    dash:[['noise',1600,5000,.15,.075,0],['sine',220,75,.13,.025,0]],
+    jump:[['noise',1000,350,.06,.035,0],['triangle',180,340,.10,.035,0]],
+    walljump:[['noise',2400,700,.09,.065,0],['triangle',280,520,.12,.035,0]],
+    doublejump:[['sine',620,1240,.19,.045,0],['noise',3200,6500,.16,.025,0]],
+    mend:[['sine',392,392,.4,.04,0],['sine',587,587,.45,.04,.1],['sine',784,784,.5,.04,.2]],
+    parry:[['sine',1175,1568,.24,.05,0],['sine',2350,2093,.32,.035,.045]],
+    ward:[['triangle',196,196,.4,.05,0],['sine',392,392,.6,.04,.04],['sine',588,588,.6,.035,.08]],
+    phase:[['noise',6000,220,.45,.055,0],['sine',880,110,.4,.045,0]],
+    blink:[['noise',700,7000,.08,.06,0],['sine',300,1800,.09,.045,0],['sine',1200,450,.15,.035,.1]],
+    heal:[['sine',330,330,.45,.045,0],['sine',495,495,.5,.04,.12],['sine',660,660,.6,.04,.24]],
+    fire:[['noise',4500,160,.6,.15,0],['triangle',95,36,.4,.10,0],['noise',1800,400,.28,.065,.13]],
+    fury:[['noise',5100,500,.19,.11,0],['triangle',155,42,.3,.085,0],['noise',3700,300,.24,.10,.1]],
+    spirit:[['sine',523,784,.45,.045,0],['sine',1046,1568,.5,.03,.1],['noise',2600,4800,.4,.018,0]],
+    echo:[['triangle',440,660,.2,.035,0],['sine',440,660,.3,.03,.12],['sine',660,990,.35,.025,.24]],
+    enemyLight:[['triangle',620,780,.16,.025,0],['noise',2800,4500,.07,.025,.08]],
+    enemyHeavy:[['triangle',150,85,.35,.05,0],['sine',310,160,.3,.03,.04]],
+    enemyBolt:[['sine',880,350,.16,.035,0],['noise',4100,1200,.12,.035,0]]
+  };
+  const combatLast=new Map();let combatNoise=null,combatVoices=0;
+  function combatSfx(name){
+    if(!sound||!combatSounds[name])return;
+    if(!audio||!mix)tone(40,.01,'sine',.0001);
+    if(!audio||!mix)return;
+    const now=audio.currentTime;
+    if(now-(combatLast.get(name)??-Infinity)<.045||combatVoices>=48)return;
+    combatLast.set(name,now);
+    const pitch=1+(Math.random()-.5)*.055;
+    for(const [wave,from,to,duration,volume,delay] of combatSounds[name]){
+      const t=now+delay;let source,filter;
+      if(wave==='noise'){
+        if(!audio.createBuffer)continue;
+        if(!combatNoise){combatNoise=audio.createBuffer(1,audio.sampleRate,audio.sampleRate);const data=combatNoise.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;}
+        source=audio.createBufferSource();source.buffer=combatNoise;
+        filter=audio.createBiquadFilter();filter.type='bandpass';filter.Q.value=.7;
+        filter.frequency.setValueAtTime(from*pitch,t);filter.frequency.exponentialRampToValueAtTime(to*pitch,t+duration);
+      }else{
+        source=audio.createOscillator();source.type=wave;source.frequency.setValueAtTime(from*pitch,t);source.frequency.exponentialRampToValueAtTime(to*pitch,t+duration);
+      }
+      const gain=audio.createGain();gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(volume,t+.005);gain.gain.exponentialRampToValueAtTime(.0001,t+duration);
+      if(filter){source.connect(filter);filter.connect(gain);}else source.connect(gain);
+      gain.connect(mix.sfx);combatVoices++;
+      source.onended=()=>{combatVoices--;source.disconnect();filter?.disconnect();gain.disconnect();};
+      source.start(t);source.stop(t+duration+.01);
+    }
   }
   function applyMix(){if(!mix)return;for(const k of ['master','music','sfx'])mix[k].gain.setTargetAtTime(k==='master'&&!sound?0:settings[k],audio.currentTime,.04);}
   function saveSettings(){settings.sound=sound;try{localStorage.setItem('echo-fall-settings',JSON.stringify(settings));}catch{}applyMix();}
@@ -179,6 +255,21 @@
   }
   function closeSettings(){bindingCapture=null;saveSettings();if(settingsReturn==='title')title();else{state=settingsReturn;closeModal();}}
   function updateSoundButton(){$('soundBtn').textContent=sound?'♪ ON':'♪ OFF';$('soundBtn').setAttribute('aria-pressed',String(sound));}
+  function seatedAtBench(){
+    const bench=player.rest?.bench;
+    return !!(player.rest?.healed&&bench&&world.interactions.some(o=>o.kind==='bench'&&o.id===bench.id)&&Math.abs(player.x+11-bench.x)<70&&Math.abs(player.y+player.h-bench.y)<65);
+  }
+  function equipStyle(id){
+    if(!['play','help','archive'].includes(state)||!seatedAtBench()){toast('Sit and finish resting at a bench to change combat styles.');return false;}
+    if(id!==null&&(!Object.hasOwn(styles,id)||!save.styles.includes(id)))return false;
+    save.style=id;player.combo=0;player.comboTime=0;player.attackBuffer=0;player.attackHold=0;player.attackCd=0;persist();writeCheckpoint();combatSfx('ward');return true;
+  }
+  function showStyleMenu(){
+    if(!seatedAtBench()){toast('Sit and finish resting at a bench, then open Pause > Combat Styles.');return;}
+    state='archive';
+    modal(`<div class="eyebrow">SIGNAL ANCHOR / COMBAT STYLES</div><h2>A different way to fight.</h2><p>Equip one form, or unequip it to return to the Wanderer. Discovered forms survive transfers.<br>EMBER replaces ordinary cuts with firebolts; charged cuts and downward strikes still use your form.</p><div class="loadout-cards"><button class="memory-choice" id="style-none"><strong>WANDERER ${save.style?'':' / EQUIPPED'}</strong><span>Unequip your form. Balanced three-hit blade chain.</span></button>${save.styles.map(id=>`<button class="memory-choice" id="style-${id}"><strong>${styles[id].name}${save.style===id?' / EQUIPPED':''}</strong><span>${styles[id].desc}</span></button>`).join('')}</div><p class="small">${save.styles.length} / 3 discovered. Search the bell tower, suspended machinery, and upper garden.</p><div class="buttons"><button class="btn" id="stylesDone">KEEP RESTING</button></div>`,{stylesDone:()=>{state='play';closeModal();},'style-none':()=>{if(equipStyle(null))showStyleMenu();}});
+    save.styles.forEach(id=>$(`style-${id}`).onclick=()=>{if(equipStyle(id))showStyleMenu();});
+  }
   function showMemoryMenu(){
     if(!nearRest()){toast('Return to a signal anchor to change memories.');return;}
     state='archive';modal(`<div class="eyebrow">ACTIVE IDENTITY</div><h2>Who sits here?</h2>${save.archive.length?save.archive.map(m=>`<button class="memory-choice" id="rest-equip-${m.id}"><strong>${memories[m.id].name}${save.active===m.id?' / ACTIVE':''}</strong><span>${memories[m.id].desc}</span></button>`).join(''):'<p>Your first transfer will leave a memory.</p>'}<div class="buttons"><button class="btn" id="archiveDone">RETURN</button></div>`,{archiveDone:()=>{state='play';closeModal();}});
@@ -222,8 +313,8 @@
   }
   function showHelp(from = state) {
     pausedFrom=from;state='help';
-    modal(`<div class="eyebrow">MOVEMENT / RHYTHM / CONSEQUENCE</div><h2>Learn the rhythm.</h2><div class="controls-grid">${Object.entries(controls).map(([k,label])=>`<span>${label}</span><b>${keyName(settings.bindings[k]||k)}</b>`).join('')}</div><p class="small">Hold jump for height. Aim down and attack in the air to pogo.<br>White attacks: tap Deflect at impact. Red attacks: evade or release a charged Deflect.<br>Imprint spends Resonance; press again to detonate. Hold Mend to heal.<br>Controller: A jump / X attack / B dash / Y interact / LB deflect / RB imprint.<br>Rest at a bench to save this life. Death carries one decision into the next.</p><div class="buttons"><button class="btn" id="resumeBtn">CONTINUE</button><button class="btn secondary" id="openSettings">SETTINGS</button>${from==='play'?'<button class="btn secondary" id="benchMemories">MEMORIES</button><button class="btn secondary" id="backTitle">TITLE / LAST BENCH</button>':''}</div>`,{
-      resumeBtn:()=>{if(pausedFrom==='title')title();else{state=pausedFrom;closeModal();}},openSettings:()=>showSettings('help'),benchMemories:showMemoryMenu,backTitle:title
+    modal(`<div class="eyebrow">MOVEMENT / RHYTHM / CONSEQUENCE</div><h2>Learn the rhythm.</h2><div class="controls-grid">${Object.entries(controls).map(([k,label])=>`<span>${label}</span><b>${keyName(settings.bindings[k]||k)}</b>`).join('')}</div><p class="small">Hold jump for height. Aim down and attack in the air to pogo.<br>White attacks: tap Deflect at impact. Red attacks: evade or release a charged Deflect.<br>Imprint spends Resonance; press again to detonate. Hold Mend to heal.<br>Controller: A jump / X attack / B dash / Y interact / LB deflect / RB imprint.<br>Rest at a bench to save this life. Death carries one decision into the next.</p><div class="buttons"><button class="btn" id="resumeBtn">CONTINUE</button><button class="btn secondary" id="openSettings">SETTINGS</button>${from==='play'?'<button class="btn secondary" id="benchMemories">MEMORIES</button><button class="btn secondary" id="benchStyles">COMBAT STYLES</button><button class="btn secondary" id="backTitle">TITLE / LAST BENCH</button>':''}</div>`,{
+      resumeBtn:()=>{if(pausedFrom==='title')title();else{state=pausedFrom;closeModal();}},openSettings:()=>showSettings('help'),benchMemories:showMemoryMenu,benchStyles:showStyleMenu,backTitle:title
     });
   }
   function newPlayer() { return { x: 110, y: FLOOR - 40, w: 22, h: 40, vx: 0, vy: 0, dir: 1, hp: 6, grounded: false, inv: 0, attackCd: 0, dashCd: 0, dash: 0, dashGrace: 0, abilityCd: 0, ward: 0, parry: 0, double: false, healUsed: false, anim: 0, runPower: 0, resonance: 0, fracture: 0, perfect: 0, counter: 0, parryCd: 0, guardCharge: 0, attackHold: 0, attackBuffer: 0, combo: 0, comboTime: 0, attackAxis: 'side', wall: 0, wallTime: 0, wallLock: 0, airDashUsed: false, drop: 0, focus: 0, safe: { x: 110, y: 412 } }; }
@@ -315,6 +406,7 @@
   }
   function interact(o) {
     if (!o) return;
+    if(o.kind==='style'){if(!styles[o.style]||save.styles.includes(o.style))return;save.styles.push(o.style);chosen.add(o.id);persist();burst(o.x,o.y,styles[o.style].color,28);combatSfx('imprint');addLog(styles[o.style].desc,'COMBAT STYLE / '+styles[o.style].name);toast('Style discovered! Sit at a bench, then Pause > Combat Styles to equip.');return;}
     if(o.kind==='relic'){chosen.add(o.id);player.resonance=3;player.hp=Math.min(6,player.hp+1);refreshUI();addLog(o.story,'A HIDDEN RECORD');toast('Hidden record recovered. Resonance restored.');burst(o.x,o.y,C.gold,24);return;}
     if(o.kind==='mirror'){
       choice('One decision can cross.',decisions.length?'The glass holds the version of you who made that choice. Transfer now to discover what the world remembers, or keep exploring.':'Make a choice at the wounded creature, then return here. You can also continue through the east gate.',[
@@ -439,12 +531,12 @@
   function beginDeflect() {
     if (player.parryCd>0) return false;
     player.parry=.30;player.perfect=active('return')?.21:.145;player.parryCd=.32;player.guardCharge=0;player.focus=0;
-    burst(player.x+11,player.y+20,C.cyan,4,.45);return true;
+    burst(player.x+11,player.y+20,C.cyan,4,.45);combatSfx('guard');return true;
   }
   function releaseCounter() {
     if (player.guardCharge<.48) {player.guardCharge=0;return false;}
     player.counter=.21;player.perfect=.21;player.parry=.21;player.parryCd=.36;player.guardCharge=0;
-    burst(player.x+11,player.y+20,C.gold,16);tone(700,.08);return true;
+    burst(player.x+11,player.y+20,C.gold,16);combatSfx('counterRelease');return true;
   }
   function hurt(amount=1,sourceX=player.x,reason='The signal could not hold.',options={}) {
     if(state!=='play'||player.inv>0||player.ward>0||(!options.heavy&&player.dash>0))return 'immune';
@@ -458,36 +550,36 @@
       if(!player.grounded)player.vy=Math.min(player.vy,-210);
       if(active('return')&&(player.mendCd||0)<=0){player.hp=Math.min(6,player.hp+1);player.mendCd=4;}
       if(options.source){options.source.strain=Math.min(15,(options.source.strain||0)+(charged?5:3));options.source.hit=.2;if(options.source===boss)boss.exposed=charged?1.8:.65;else options.source.stagger=charged?.65:.25;}
-      burst(player.x+11,player.y+20,charged?C.gold:C.cyan,22);tone(charged?1050:850,.1);shake=4;hitstop=.05;refreshUI();
+      burst(player.x+11,player.y+20,charged?C.gold:C.cyan,22);combatSfx(charged?'counter':'deflect');shake=4;hitstop=.05;refreshUI();
       toast(charged?'RESONANT COUNTER · Strain fractures the attacker':'PERFECT DEFLECT · +1 Resonance');return 'parry';
     }
     if(!options.hazard&&!options.heavy&&facing&&player.parry>0) {
       player.fracture=Math.min(player.hp-1,player.fracture+.5);player.inv=.2;player.parry=0;player.focus=0;
-      tone(250,.08);refreshUI();toast('LATE BLOCK · Integrity fractured');return 'guard';
+      combatSfx('block');refreshUI();toast('LATE BLOCK · Integrity fractured');return 'guard';
     }
     if(options.source?.training){amount=Math.min(amount,Math.max(0,player.hp-1));player.fracture=0;}
     player.hp-=amount+Math.ceil(player.fracture);player.fracture=0;player.inv=1;player.focus=0;player.attackHold=0;player.guardCharge=0;player.dash=0;
     player.vx=player.x<sourceX?-270:270;player.vy=-170;player.wallLock=.12;
-    shake=8;hitstop=.06;burst(player.x+10,player.y+20,C.rose,14);tone(120,.12,'sawtooth');refreshUI();
+    shake=8;hitstop=.06;burst(player.x+10,player.y+20,C.rose,14);combatSfx('hurt');refreshUI();
     if(player.hp<=0)die(reason);return 'hit';
   }
   function hitEnemy(e,damage,knock=player.dir,stagger=.12) {
     if(e.hp<=0)return false;
-    if(e.type==='echo'&&e.memory==='return'&&e.phase==='walk'&&stagger<.5&&(e.skillCd||0)<=0){e.skillCd=2;e.blockFlash=.25;burst(e.x+13,e.y+15,C.cyan,10);return false;}
+    if(e.type==='echo'&&e.memory==='return'&&e.phase==='walk'&&stagger<.5&&(e.skillCd||0)<=0){e.skillCd=2;e.blockFlash=.25;combatSfx('armor');burst(e.x+13,e.y+15,C.cyan,10);return false;}
     if(e.memory==='obedience'&&(e.skillCd||0)<=0){damage*=.35;e.skillCd=2.5;e.blockFlash=.3;}
     const protector=enemies.find(other=>other!==e&&other.hp>0&&other.guarding&&Math.abs(other.x-e.x)<100&&Math.abs(other.y-e.y)<45);
-    if(protector&&stagger<.5){damage*=.3;protector.blockFlash=.22;burst(protector.x+13,protector.y+15,C.gold,5);}
+    if(protector&&stagger<.5){damage*=.3;protector.blockFlash=.22;combatSfx('armor');burst(protector.x+13,protector.y+15,C.gold,5);}
     e.hp=e.training?Math.max(1,e.hp-damage):e.hp-damage;e.hit=.16;e.x=clamp(e.x+knock*10,e.left-25,e.right+25);e.stagger=Math.max(e.stagger,stagger);
-    burst(e.x+13,e.y+14,e.type==='echo'?'#bfa1ff':C.rose,8);tone(230,.045,'square',.02);hitstop=Math.max(hitstop,.025);
-    if(e.hp<=0){if(e.guardId)runFlags[e.guardId]=true;remnants.push({...e,hp:e.max,strain:0,phase:'recover',life:.65,prevX:e.x,prevY:e.y});burst(e.x+13,e.y+16,C.cyan,18);if(active('betrayal')){player.hp=Math.min(6,player.hp+1);refreshUI();}}
+    burst(e.x+13,e.y+14,e.type==='echo'?'#bfa1ff':C.rose,8);combatSfx(stagger>=.5?'heavyHit':'hit');hitstop=Math.max(hitstop,.025);
+    if(e.hp<=0){combatSfx('shatter');if(e.guardId)runFlags[e.guardId]=true;remnants.push({...e,hp:e.max,strain:0,phase:'recover',life:.65,prevX:e.x,prevY:e.y});burst(e.x+13,e.y+16,C.cyan,18);if(active('betrayal')){player.hp=Math.min(6,player.hp+1);refreshUI();}}
     return true;
   }
   function damageBoss(amount,bypass=false) {
     if(!boss||!bossStarted||bossDefeated)return false;
     if(boss.type==='king'&&!bypass&&player.grounded&&player.dashGrace<=0&&boss.exposed<=0) {
-      burst(boss.x+boss.w/2,boss.y+30,C.gold,7);tone(1100,.04,'triangle');return false;
+      burst(boss.x+boss.w/2,boss.y+30,C.gold,7);combatSfx('armor');return false;
     }
-    boss.hp-=amount;boss.hit=.12;shake=3;hitstop=Math.max(hitstop,.03);burst(boss.x+boss.w/2,boss.y+38,C.cyan,12);tone(170,.06,'square');
+    boss.hp-=amount;boss.hit=.12;shake=3;hitstop=Math.max(hitstop,.03);burst(boss.x+boss.w/2,boss.y+38,C.cyan,12);combatSfx(amount>=5?'heavyHit':'hit');
     if(boss.type==='king'){
       const style=!player.grounded?'air':player.dashGrace>0?'dash':bypass?'charge':'ground';
       if(style!==boss.lastStyle&&style!=='ground')boss.breaks=(boss.breaks||0)+1;boss.lastStyle=style;
@@ -501,17 +593,19 @@
   }
   function bounce() {
     player.vy=-535;player.grounded=false;player.airDashUsed=false;player.double=false;player.dashCd=0;player.inv=Math.max(player.inv,.12);
-    burst(player.x+11,player.y+40,C.cyan,12);tone(650,.07);shake=2;
+    burst(player.x+11,player.y+40,C.cyan,12);combatSfx('pogo');shake=2;
   }
   function melee(radius=68,both=false,bonus=0,axis='side',heavy=false) {
-    const damage=(heavy?5.5:player.combo===3?3.5:2)+player.runPower+bonus;
+    const form=styles[save.style];
+    const damage=((heavy?5.5:player.combo===3?3.5:2)+player.runPower+bonus)*(form?.damage||1);
     let box={x:both?player.x-radius:player.dir>0?player.x+6:player.x-radius,y:player.y-5,w:both?radius*2:radius,h:player.h+10};
     if(axis==='up')box={x:player.x-21,y:player.y-radius,w:64,h:radius+15};
     if(axis==='down')box={x:player.x-20,y:player.y+24,w:62,h:radius};
+    if(save.style==='needle'&&axis==='side'&&!both){box.y=player.y+10;box.h=20;}
     player.attackAxis=axis;
-    slash.push({x:player.x+11,y:player.y+20,dir:player.dir,axis,life:heavy?.25:.18,radius,color:heavy?C.gold:player.runPower?'#ffa16b':C.cyan,both});
+    slash.push({x:player.x+11,y:player.y+20,dir:player.dir,axis,form:save.style,life:heavy?.25:.18,radius,color:heavy?C.gold:form?.color|| (player.runPower?'#ffa16b':C.cyan),both});
     let connected=false;
-    for(const e of enemies)if(e.hp>0&&overlap(box,e)){hitEnemy(e,damage,axis==='side'?player.dir:0,heavy||player.combo===3?.55:.12);e.strain=Math.min(15,e.strain+(heavy?2:0));connected=true;}
+    for(const e of enemies)if(e.hp>0&&overlap(box,e)){hitEnemy(e,damage,axis==='side'?player.dir:0,heavy||player.combo===3||save.style==='breaker'?.55:.12);e.strain=Math.min(15,e.strain+(heavy?2:0));connected=true;}
     if(boss&&overlap(box,boss))connected=damageBoss(damage,heavy||both)||connected;
     if(axis==='down') {
       if(world.pogo.some(p=>overlap(box,p))||world.hazards.some(p=>overlap(box,p)))connected=true;
@@ -519,7 +613,7 @@
     }
     if(connected)gainResonance(.25);
     if(zoneId==='garden'&&Math.abs(player.x-1110)<100&&childStage<3)toast('He flinches. A blade cannot answer his question.');
-    tone(heavy?260:420,.07,'triangle');return connected;
+    combatSfx(heavy?'heavy':save.style==='breaker'?'heavyHit':axis==='up'?'rising':axis==='down'?'downstrike':'slash'+(player.combo||1));return connected;
   }
   function attack(heavy=false) {
     if(player.attackCd>0&&!heavy){player.attackBuffer=Math.min(.42,player.attackCd+.085);return false;}
@@ -527,10 +621,11 @@
     const axis=down&&!player.grounded?'down':up?'up':'side';
     player.combo=heavy?3:player.comboTime>0?player.combo%3+1:1;player.comboTime=.72;
     player.attackCd=heavy?.46:player.combo===3?.34:.22;player.attackBuffer=0;player.focus=0;
+    player.attackCd*=styles[save.style]?.speed||1;
     player.attackDuration=player.attackCd;player.attackVisual=player.attackCd;player.attackHeavy=heavy;
     if(active('fire')&&axis!=='down'&&!heavy) {
-      shots.push({x:player.x+11,y:player.y+18,vx:axis==='up'?0:player.dir*590,vy:axis==='up'?-590:0,r:7,life:1.1,friendly:true,color:'#ffa16b',damage:2.7+player.runPower});tone(230,.1,'sawtooth',.022);
-    }else melee(heavy?96:player.combo===3?80:65,false,0,axis,heavy);
+      shots.push({x:player.x+11,y:player.y+18,vx:axis==='up'?0:player.dir*590,vy:axis==='up'?-590:0,r:7,life:1.1,friendly:true,color:'#ffa16b',damage:2.7+player.runPower});combatSfx('firebolt');
+    }else {const form=styles[save.style];melee(form?(heavy?form.heavyReach:form.reach):(heavy?96:player.combo===3?80:65),save.style==='crescent'&&axis==='side'&&(heavy||player.combo===3),0,axis,heavy);}
     return true;
   }
   function imprintAttack() {
@@ -541,7 +636,7 @@
     targets.sort((a,b)=>Math.abs(a.x-player.x)-Math.abs(b.x-player.x));
     if(!targets.length){toast('Get close enough to leave an imprint.');return false;}
     imprint={target:targets[0],charge:count,time:2};player.resonance-=count;player.inv=Math.max(player.inv,.15);player.focus=0;
-    burst(imprint.target.x+15,imprint.target.y+18,C.gold,18);tone(800,.12);toast('IMPRINT SET · Q to detonate, or let it mature');return true;
+    burst(imprint.target.x+15,imprint.target.y+18,C.gold,18);combatSfx('imprint');toast('IMPRINT SET · Q to detonate, or let it mature');return true;
   }
   function detonate() {
     if(!imprint)return;
@@ -549,7 +644,7 @@
     if(target.hp<=0)return;
     const damage=3+charge*2+(target.strain||0)+(time<=0?2:0);target.strain=0;
     if(target===boss)damageBoss(damage,true);else hitEnemy(target,damage,0,.8);
-    burst(target.x+target.w/2,target.y+target.h/2,C.gold,38,1.6);hitstop=.08;shake=8;tone(110,.25,'sawtooth');
+    burst(target.x+target.w/2,target.y+target.h/2,C.gold,38,1.6);hitstop=.08;shake=8;combatSfx('detonate');
   }
   function ability() {
     if (player.abilityCd > 0) { toast(`Memory recovering · ${Math.ceil(player.abilityCd)}s`); return; }
@@ -572,10 +667,10 @@
       else burst(player.x + 60, player.y, C.cyan, 18);
       player.abilityCd = 4;
     }
-    tone(620, .16);
+    combatSfx(type);
   }
   function nearestInteraction() {
-    return world.interactions.find(o => !chosen.has(o.id) && Math.abs(player.x + 11 - o.x) < 70 && Math.abs(player.y + 30 - o.y) < 95);
+    return world.interactions.find(o => !(o.kind==='style'&&save.styles.includes(o.style)) && !chosen.has(o.id) && Math.abs(player.x + 11 - o.x) < 70 && Math.abs(player.y + 30 - o.y) < 95);
   }
   function movePlayerX(delta) {
     const old=player.x;player.x+=delta;player.wall=0;
@@ -616,7 +711,7 @@
     if(leavingRest){player.rest=null;player.standUp=0;}
     if(player.rest){
       const rest=player.rest;rest.time+=dt;movePlayerX(approach(player.x,rest.bench.x-11,dt*180)-player.x);
-      if(rest.time>=.45&&!rest.healed){rest.healed=true;player.hp=6;player.fracture=0;player.resonance=Math.max(1,player.resonance);player.safe={x:player.x,y:player.y};player.abilityCd=0;refreshUI();burst(rest.bench.x,rest.bench.y,C.cyan,20);tone(530,.25);const saved=writeCheckpoint(rest.bench);toast(saved?'Signal restored / game saved. E to stand.':'Signal restored. Browser storage is unavailable; this life could not be saved.');}
+      if(rest.time>=.45&&!rest.healed){rest.healed=true;player.hp=6;player.fracture=0;player.resonance=Math.max(1,player.resonance);player.safe={x:player.x,y:player.y};player.abilityCd=0;refreshUI();burst(rest.bench.x,rest.bench.y,C.cyan,20);tone(530,.25);const saved=writeCheckpoint(rest.bench);toast(saved?'Saved. Pause > Combat Styles to equip. E to stand.':'Signal restored. Browser storage is unavailable; this life could not be saved.');}
     }
     if(move&&player.wallLock<=0)player.dir=move;
     player.deflectBuffer=Math.max(0,(player.deflectBuffer||0)-dt);
@@ -635,15 +730,15 @@
     if(player.wall&&!player.grounded){player.wallTime=.11;player.lastWall=player.wall;}
     if(jumpBuffer>0&&down&&player.grounded&&player.onPlatform){player.drop=.23;player.y+=3;player.grounded=false;jumpBuffer=0;coyote=0;}
     if(jumpBuffer>0) {
-      if(!player.grounded&&player.wallTime>0){player.vy=-570;player.vx=-(player.lastWall||player.wall)*245;player.dir=Math.sign(player.vx);player.wallLock=.055;player.wallSteer=.35;player.wallTime=0;player.airDashUsed=false;player.double=false;jumpBuffer=0;coyote=0;player.wall=0;burst(player.x+11,player.y+24,C.cyan,8);}
-      else if(coyote>0||(active('defiance')&&!player.double)){if(coyote<=0)player.double=true;player.vy=-600;player.grounded=false;jumpBuffer=0;coyote=0;tone(360,.06);burst(player.x+11,player.y+player.h,C.cyan,6,.5);}
+      if(!player.grounded&&player.wallTime>0){player.vy=-570;player.vx=-(player.lastWall||player.wall)*245;player.dir=Math.sign(player.vx);player.wallLock=.055;player.wallSteer=.35;player.wallTime=0;player.airDashUsed=false;player.double=false;jumpBuffer=0;coyote=0;player.wall=0;burst(player.x+11,player.y+24,C.cyan,8);combatSfx('walljump');}
+      else if(coyote>0||(active('defiance')&&!player.double)){if(coyote<=0)player.double=true;player.vy=-600;player.grounded=false;jumpBuffer=0;coyote=0;combatSfx(player.double?'doublejump':'jump');burst(player.x+11,player.y+player.h,C.cyan,6,.5);}
     }
     player.dashBuffer=Math.max(0,(player.dashBuffer||0)-dt);
     if(pressed.has('k')||pressed.has('shift'))player.dashBuffer=.12;
     if(player.dashBuffer>0&&player.dashCd<=0&&(player.grounded||!player.airDashUsed)){
       player.dashBuffer=0;
-      noiseSfx(.16,2200,.035);
-      player.airDashUsed=!player.grounded;player.dash=.15;player.dashCd=active('abandon')?.32:.58;player.dashGrace=.50;player.vy=0;player.attackHold=0;player.guardCharge=0;player.attackCd=Math.min(player.attackCd,.06);player.focus=0;tone(180,.12,'sawtooth',.015);
+      combatSfx('dash');
+      player.airDashUsed=!player.grounded;player.dash=.15;player.dashCd=active('abandon')?.32:.58;player.dashGrace=.50;player.vy=0;player.attackHold=0;player.guardCharge=0;player.attackCd=Math.min(player.attackCd,.06);player.focus=0;
     }
     if(player.dash>0){player.vx=player.dir*720;player.vy=0;particles.push({x:player.x+11,y:player.y+20,vx:0,vy:0,life:.25,max:.25,color:C.cyan,size:6});}
     else{
@@ -670,7 +765,7 @@
     if(player.y>world.bottom+60){hazardReturn('The roots below took the last of the signal.');pressed.clear();released.clear();return;}
     if(world.hazards.some(h=>overlap(player,h))){hazardReturn('The roots below took the last of the signal.');pressed.clear();released.clear();return;}
     if(keys.has('h')&&player.grounded&&Math.abs(player.vx)<20&&player.resonance>=1&&player.hp<6&&player.attackCd<=0&&!keys.has('f')){
-      player.focus+=dt;if(player.focus>=1){player.focus=0;player.resonance-=1;player.hp++;player.fracture=0;refreshUI();burst(player.x+11,player.y+20,C.cyan,20);tone(530,.2);}
+      player.focus+=dt;if(player.focus>=1){player.focus=0;player.resonance-=1;player.hp++;player.fracture=0;refreshUI();burst(player.x+11,player.y+20,C.cyan,20);combatSfx('mend');}
     }else player.focus=0;
     player.anim+=dt*(Math.abs(player.vx)>10?12:2);
     if(boss&&!bossStarted&&!bossDefeated&&player.x>world.arena[0]+30){bossStarted=true;boss.timer=1.1;toast(boss.type==='king'?'THE KING · Deflect his rhythm. Break his prediction.':'THE MOTHER · Deflect the white signals. Evade the red.');addLog(boss.type==='king'?'“Every choice has already been made.”':'“Why do you insist on an ending?”',boss.type==='king'?'THE KING':'THE MOTHER');}
@@ -697,7 +792,7 @@
       if(e.phase==='recognize'){if(e.timer<=0){e.phase='walk';e.speech='';e.timer=.4;}continue;}
       if(e.type==='echo'&&e.memory&&close&&e.skillCd<=0){
         if(e.memory==='respect'){gainResonance(1);e.hp=0;burst(e.x+13,e.y+20,C.cyan,20);addLog('The summoned self lowers its blade. "You asked once. I choose again."','KINSHIP');continue;}
-        if(e.memory==='fire'){const d=Math.hypot(dx,dy)||1;shots.push({x:e.x+13,y:e.y+18,vx:dx/d*220,vy:dy/d*220,r:7,life:3,friendly:false,color:'#ffa16b',source:e});e.skillCd=1.8;}
+        if(e.memory==='fire'){combatSfx('firebolt');const d=Math.hypot(dx,dy)||1;shots.push({x:e.x+13,y:e.y+18,vx:dx/d*220,vy:dy/d*220,r:7,life:3,friendly:false,color:'#ffa16b',source:e});e.skillCd=1.8;}
         if(e.memory==='mercy'||e.memory==='sacrifice'){if(boss&&!bossDefeated)boss.hp=Math.min(boss.max,boss.hp+1.5);burst(e.x+13,e.y+18,C.rose,10);e.skillCd=4;}
         if(e.memory==='defiance'&&Math.abs(dx)>90){e.x=clamp(e.x+Math.sign(dx)*85,e.left,e.right);burst(e.x,e.y,'#c7a5ff',12);e.skillCd=2.5;}
       }
@@ -707,13 +802,13 @@
       }
       if(e.type==='drone'){
         e.y=e.homeY+Math.sin(roomTime*2+e.home)*18;e.x=clamp(e.x+e.dir*30*dt,e.left,e.right);if(e.x<=e.left||e.x>=e.right)e.dir*=-1;
-        if(e.phase==='windup'&&e.timer<=0){const d=Math.hypot(dx,dy)||1;shots.push({x:e.x+13,y:e.y+18,vx:dx/d*235,vy:dy/d*235,r:7,life:4,friendly:false,color:C.cyan,source:e});e.phase='walk';e.timer=2.5;}
-        else if(e.phase==='walk'&&e.timer<=0&&close){e.phase='windup';e.timer=.7;tone(740,.2,'sine',.012);}
+        if(e.phase==='windup'&&e.timer<=0){combatSfx('enemyBolt');const d=Math.hypot(dx,dy)||1;shots.push({x:e.x+13,y:e.y+18,vx:dx/d*235,vy:dy/d*235,r:7,life:4,friendly:false,color:C.cyan,source:e});e.phase='walk';e.timer=2.5;}
+        else if(e.phase==='walk'&&e.timer<=0&&close){e.phase='windup';e.timer=.7;combatSfx('enemyBolt');}
         continue;
       }
       if(e.phase==='walk'){
         if(close)e.dir=Math.sign(dx)||e.dir;
-        if(Math.abs(dx)<(e.type==='lancer'?150:75)&&Math.abs(dy)<75&&e.timer<=0){e.phase='windup';e.timer=e.training?.9:e.type==='lancer'?.78:.46;e.heavy=e.type==='lancer';e.combo=0;tone(e.heavy?190:620,.16,'triangle',.018);}
+        if(Math.abs(dx)<(e.type==='lancer'?150:75)&&Math.abs(dy)<75&&e.timer<=0){e.phase='windup';e.timer=e.training?.9:e.type==='lancer'?.78:.46;e.heavy=e.type==='lancer';e.combo=0;combatSfx(e.heavy?'enemyHeavy':'enemyLight');}
         else{e.x+=e.dir*(e.type==='echo'?95:55)*dt;if(e.x<=e.left||e.x>=e.right)e.dir*=-1;}
       }else if(e.phase==='windup'&&e.timer<=0){e.phase='strike';e.connected=false;e.timer=e.type==='lancer'?.26:.17;e.vx=e.dir*(e.type==='lancer'?430:e.memory==='abandon'?420:240);}
       else if(e.phase==='strike'){
@@ -736,7 +831,7 @@
     const [left,right]=world.arena;
     if(boss.type==='king'){
       if(boss.phase==='idle'&&boss.timer<=0){boss.attack++;boss.pattern=boss.stage===2?[2,0,1][boss.attack%3]:boss.attack%3;boss.phase='tell';boss.timer=boss.pattern===0?.85:boss.stage===2?.5:.65;boss.heavy=boss.pattern===0;boss.face=Math.sign(player.x-boss.x)||-1;boss.chain=0;}
-      else if(boss.phase==='tell'&&boss.timer<=0){boss.phase=boss.heavy?'sweep':'charge';boss.timer=boss.heavy?.26:.35;tone(95,.15,'sawtooth');}
+      else if(boss.phase==='tell'&&boss.timer<=0){boss.phase=boss.heavy?'sweep':'charge';boss.timer=boss.heavy?.26:.35;combatSfx('enemyHeavy');}
       else if(boss.phase==='charge'||boss.phase==='sweep'){
         if(boss.phase==='charge')boss.x=clamp(boss.x+boss.face*460*dt,left+30,right-80);
         const range=boss.heavy?180:35;
@@ -748,7 +843,7 @@
       if(boss.phase==='idle'&&boss.timer<=0){boss.phase='tell';boss.timer=.9;boss.targetX=player.x;boss.heavy=boss.attack%3===2;}
       else if(boss.phase==='tell'&&boss.timer<=0){
         boss.phase='idle';boss.timer=boss.stage===2?1.8:2.25;boss.attack++;
-        if(boss.heavy){for(const dir of [-1,1])shots.push({x:boss.x+30,y:FLOOR-17,vx:dir*245,vy:0,r:13,life:5,friendly:false,color:C.rose,source:boss,heavy:true});}
+        combatSfx(boss.heavy?'enemyHeavy':'enemyBolt');if(boss.heavy){for(const dir of [-1,1])shots.push({x:boss.x+30,y:FLOOR-17,vx:dir*245,vy:0,r:13,life:5,friendly:false,color:C.rose,source:boss,heavy:true});}
         else{const dx=player.x-boss.x,dy=player.y-boss.y,d=Math.hypot(dx,dy)||1;for(const angle of [-.20,0,.20])shots.push({x:boss.x+30,y:boss.y+30,vx:(dx/d*Math.cos(angle)-dy/d*Math.sin(angle))*260,vy:(dy/d*Math.cos(angle)+dx/d*Math.sin(angle))*260,r:8,life:4,friendly:false,color:C.cyan,source:boss});}
         shots.push({x:boss.targetX+11,y:160,vx:0,vy:390,r:10,life:1.3,friendly:false,color:boss.heavy?C.rose:C.cyan,heavy:boss.heavy,source:boss});
         if((boss.attack%2===0||boss.stage===2)&&enemies.filter(e=>e.hp>0).length<3){const x=player.x<(left+right)/2?right-110:left+40;const e=enemy(x,'echo',{left:left+20,right:right-40});e.hp=e.max=remembered('betrayal')?9:6;e.memory=save.archive.length?save.archive[(boss.recallIndex||0)%save.archive.length].id:'return';boss.recallIndex=(boss.recallIndex||0)+1;e.skillCd=1.5;enemies.push(e);burst(e.x,e.y,'#bfa1ff',18);toast(`RECALLED / ${memories[e.memory].short}`);}
@@ -768,7 +863,7 @@
       }else if(overlap(box,player)){
         const result=hurt(1,s.x,'A signal pierced the body.',{source:s.source,heavy:s.heavy});
         if(result==='parry'){
-          s.friendly=true;s.reflected=true;s.damage=4;s.color=C.gold;s.life=2;s.r=8;
+          combatSfx('reflect');s.friendly=true;s.reflected=true;s.damage=4;s.color=C.gold;s.life=2;s.r=8;
           s.trail=[];
           const tx=s.source&&s.source.hp>0?s.source.x+13:player.x+player.dir*300,ty=s.source?s.source.y+18:player.y+20,d=Math.hypot(tx-s.x,ty-s.y)||1;
           s.vx=(tx-s.x)/d*540;s.vy=(ty-s.y)/d*540;
@@ -972,9 +1067,12 @@
   }
   function drawInteraction(o) {
     const used=chosen.has(o.id),x=o.x,y=o.y;
-    if(['cache','creature','relic'].includes(o.kind)&&used)return;
+    if(o.kind==='style'&&save.styles.includes(o.style))return;
+    if(['cache','creature','relic','style'].includes(o.kind)&&used)return;
     let labelY=y-68;
-    if(o.kind==='mirror'){
+    if(o.kind==='style'){
+      const c=styles[o.style].color,bob=Math.sin(clock*2)*4;glow(x,y,55,c,.18);line(x-16,y+18,x+16,y-18,c,4);line(x-11,y-2,x+2,y+11,c,3);ctx.strokeStyle=c;ctx.beginPath();ctx.arc(x,y,27+bob,0,Math.PI*2);ctx.stroke();
+    }else if(o.kind==='mirror'){
       glow(x,y-9,44,C.cyan,.1);polygon([[x,y-43],[x+13,y-9],[x,y+26],[x-13,y-9]],'#507b87');polygon([[x,y-34],[x+8,y-9],[x,y+17],[x-8,y-9]],'#91dedc99');
     }else if(o.kind==='scar'){
       glow(x,y+20,24,'#ffa16b',.1);line(x-18,y+21,x+20,y+21,'#856453',2);for(let i=0;i<5;i++)rect(x-12+i*6,y+17+(i%2)*2,3,2,'#9b5b51');
@@ -1083,7 +1181,7 @@
     }
     text(imprint?'Q  DETONATE':player.resonance>=1?'Q  IMPRINT':'F  DEFLECT',210,H-43,9,imprint?C.gold:C.cyan);
     rect(27,H-28,74,3,'#3c4b60');rect(27,H-28,74*(1-clamp(player.dashCd/(active('abandon')?.32:.58),0,1)),3,player.airDashUsed?'#516779':C.cyan);text(player.airDashUsed?'AIR DASH USED':'DASH READY',27,H-13,8,'#8fa5b9');
-    rect(122,H-28,74,3,'#3c4b60');rect(122,H-28,74*(1-clamp(player.abilityCd/7,0,1)),3,save.active?memories[save.active].color:C.cyan);text('MEMORY / L',122,H-13,8,'#8fa5b9');
+    rect(122,H-28,74,3,'#3c4b60');rect(122,H-28,74*(1-clamp(player.abilityCd/7,0,1)),3,save.active?memories[save.active].color:C.cyan);text('MEMORY / L',122,H-13,8,'#8fa5b9');text('FORM / '+(save.style?save.style.toUpperCase():'WANDERER'),340,H-13,9,styles[save.style]?.color||C.cyan);
     text(player.resonance>=1&&player.hp<6?'H  HOLD TO MEND':'J  STRIKE / HOLD',216,H-14,8,'#9bb8bd');
     text('M  MAP   E  INTERACT',W-26,H-25,9,'#bed3df','right');text('W / S + J  AIM BLADE',W-26,H-10,8,'#7997aa','right');
     const mx=W-141,my=24,mw=110,mh=54,sx=mw/world.width,sy=mh/(world.bottom-world.top);
@@ -1120,6 +1218,9 @@
       for(const s of shots)drawProjectile(s);
       for(const s of slash){
         ctx.save();const progress=1-clamp(s.life/(s.color===C.gold?.25:.18),0,1);ctx.globalAlpha=(1-progress)*.9;
+        if(s.form==='needle'&&s.axis==='side'&&!s.both){
+          const tip=s.x+s.dir*s.radius;line(s.x,s.y,tip,s.y,s.color,5*(1-progress));line(s.x,s.y,tip,s.y,C.white,1);polygon([[tip,s.y],[tip-s.dir*18,s.y-5],[tip-s.dir*18,s.y+5]],s.color);ctx.restore();continue;
+        }
         ctx.translate(s.x,s.y-5);ctx.scale(s.axis==='up'||s.axis==='down'?.65:1,s.axis==='up'||s.axis==='down'?1:.60);ctx.translate(-s.x,-s.y);
         const facing=s.axis==='up'?-Math.PI/2:s.axis==='down'?Math.PI/2:s.dir>0?0:Math.PI;
         const start=facing-1.3+progress*.65,end=facing+1.15+progress*.65,r=s.radius*.84;
@@ -1129,7 +1230,7 @@
         ctx.restore();
       }
       for(const p of particles){ctx.globalAlpha=clamp(p.life/p.max,0,1);if(Math.hypot(p.vx,p.vy)>70)line(p.x,p.y,p.x-p.vx*.018,p.y-p.vy*.018,p.color,Math.max(1,p.size*.45));else rect(p.x,p.y,p.size,p.size,p.color);}ctx.globalAlpha=1;
-      const nearby=nearestInteraction();if(nearby&&state==='play'){const label=nearby.kind==='gate'?'ENTER':nearby.kind==='bench'?(player.rest?'STAND':'REST'):nearby.kind==='lever'?'OPEN':nearby.kind==='cache'?'TAKE':'LISTEN';rect(nearby.x-48,nearby.y-60,96,25,'#0c1725ed');ctx.strokeStyle=world.accent+'77';ctx.lineWidth=1;ctx.strokeRect(nearby.x-48,nearby.y-60,96,25);text('[ E ] '+label,nearby.x,nearby.y-43,10,C.white,'center');}
+      const nearby=nearestInteraction();if(nearby&&state==='play'){const label=nearby.kind==='gate'?'ENTER':nearby.kind==='bench'?(player.rest?'STAND':'REST'):nearby.kind==='lever'?'OPEN':['cache','style'].includes(nearby.kind)?'TAKE':'LISTEN';rect(nearby.x-48,nearby.y-60,96,25,'#0c1725ed');ctx.strokeStyle=world.accent+'77';ctx.lineWidth=1;ctx.strokeRect(nearby.x-48,nearby.y-60,96,25);text('[ E ] '+label,nearby.x,nearby.y-43,10,C.white,'center');}
       ctx.translate(viewCamera,viewCameraY);drawHud();
     }
     const vignette=ctx.createRadialGradient(W/2,H/2,180,W/2,H/2,570);vignette.addColorStop(0,'transparent');vignette.addColorStop(1,'#02071177');ctx.fillStyle=vignette;ctx.fillRect(0,0,W,H);
@@ -1169,7 +1270,7 @@
 
   // Only exposed when explicitly running the local verification harness.
   if (typeof window.__ECHO_TEST__ === 'function') window.__ECHO_TEST__({
-    frame, update, checkpointValid, writeCheckpoint, resumeRun, showSettings, pollGamepad, mappedKey, hitEnemy, updateEnemies, updateBoss, startRun, loadRoom, enterZone, interact, recordDecision, extract, die, ability, attack, damageBoss, childDialogue, choirDialogue, ending, remembered, beginDeflect, releaseCounter, hurt, imprintAttack, detonate, enemy, movePlayerX, updateShots, doorOpen, showMap,
+    showStyleMenu, equipStyle, styles, combatSfx, combatSounds, frame, update, checkpointValid, writeCheckpoint, resumeRun, showSettings, pollGamepad, mappedKey, hitEnemy, updateEnemies, updateBoss, startRun, loadRoom, enterZone, interact, recordDecision, extract, die, ability, attack, damageBoss, childDialogue, choirDialogue, ending, remembered, beginDeflect, releaseCounter, hurt, imprintAttack, detonate, enemy, movePlayerX, updateShots, doorOpen, showMap,
     get settings(){return settings;},get state(){return state;},get player(){return player;},get world(){return world;},get boss(){return boss;},get save(){return save;},get decisions(){return decisions;},get enemies(){return enemies;},get room(){return room;},get childStage(){return childStage;},get camera(){return camera;},get cameraY(){return cameraY;},get pressed(){return pressed;},get keys(){return keys;},get released(){return released;},get shots(){return shots;},get zoneId(){return zoneId;},get flags(){return runFlags;},get imprint(){return imprint;},get visited(){return visited;},
     setSave(value){save={...save,...value};},setState(value){state=value;},render
   });

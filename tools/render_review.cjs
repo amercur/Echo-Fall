@@ -26,5 +26,10 @@ const root=path.join(__dirname,'..');
   for(const [x,y,heavy,vx,vy] of [[450,250,false,180,0],[680,260,true,-160,0],[820,170,false,0,180]])game.shots.push({x,y,vx,vy,r:heavy?13:8,heavy,life:4,color:heavy?'#ff6f91':'#73f0e7',friendly:false});
   for(let i=0;i<30;i++)game.updateShots(1/120);game.player.inv=0;game.render();
   fs.writeFileSync(path.join(out,'projectiles.png'),canvas.toBuffer('image/png'));
-  console.log('Rendered gameplay scenes, bench rest, and projectile details to art-review/.');
+  game.loadRoom('wake');game.enemies.length=0;Object.assign(game.player,{x:420,y:412,grounded:true,inv:0});
+  for(const style of ['needle','crescent','breaker']){
+    game.setSave({style,styles:['needle','crescent','breaker']});tick(.5);game.player.attackCd=0;game.player.combo=2;game.player.comboTime=.5;game.attack();game.render();
+    fs.writeFileSync(path.join(out,'form-'+style+'.png'),canvas.toBuffer('image/png'));
+  }
+  console.log('Rendered gameplay scenes, bench rest, projectile details, and combat forms to art-review/.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

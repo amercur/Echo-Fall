@@ -71,6 +71,20 @@ Open Settings with the gear button or through the pause menu. Controller default
 
 ## Combat and traversal
 
+### Discoverable combat styles
+
+Explore optional platforms in the **Belfry**, **Suspended Lungs**, and **upper Garden** to find three permanent combat forms. Collect a glowing weapon record with Interact. Finding a form unlocks it without automatically equipping it.
+
+| Form | Moveset |
+|---|---|
+| Needle | Quick, narrow thrusts; extended charged reach |
+| Crescent | Wide cuts; the third hit and charged attack sweep both sides |
+| Breaker | Short, slower blows with stronger damage and stagger |
+
+To equip or unequip, sit at a bench and finish resting, then open **Pause > Combat Styles**. Choose **Wanderer** to unequip and restore the original moveset. Forms cannot be changed elsewhere. Unlocks and the selected form survive transfers and browser reloads. EMBER still replaces ordinary cuts with firebolts; charged and downward attacks use your selected form. The current form is shown in the combat HUD.
+
+Combat audio uses distinct layered sounds for all three combo hits, rising and downward cuts, charged attacks, pogo bounces, deflects, counters, imprints, and each memory ability. Impacts, armor blocks, reflected projectiles, and enemy warnings have separate cues. Small pitch variations reduce repetition; cached noise and a voice limit keep rapid combat bounded. Enable sound with the speaker button, then adjust **SFX** separately from music in Settings.
+
 White telegraphs can be deflected with a short **F** tap at impact. A perfect deflect grants Resonance and leaves strain in the attacker. A late block fractures your integrity: that deferred damage is applied on the next hit. A clean deflect clears the fracture.
 
 Red telegraphs require an evasive jump or a **charged F release**. Hold for roughly half a second, then release just before impact. Ordinary dash invulnerability does not stop red attacks. Airborne deflects can face either direction and restore aerial movement. Deflected projectiles return toward their shooter.

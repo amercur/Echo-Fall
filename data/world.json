@@ -288,6 +288,14 @@
           "y": -380,
           "label": "THE BELL KEEPER",
           "story": "Before the Choir, this bell rang when someone made a choice. Its clapper is worn down to a thread."
+        },
+        {
+          "id": "form-needle",
+          "kind": "style",
+          "x": 290,
+          "y": -375,
+          "label": "BELLKEEPER FORM",
+          "style": "needle"
         }
       ],
       "spawns": {
@@ -1210,6 +1218,14 @@
           "x": 710,
           "y": 65,
           "label": "A RESONANCE VESSEL"
+        },
+        {
+          "id": "form-breaker",
+          "kind": "style",
+          "x": 805,
+          "y": 65,
+          "label": "ENGINE FORM",
+          "style": "breaker"
         }
       ],
       "spawns": {
@@ -1444,6 +1460,14 @@
           "y": 125,
           "label": "A SEED FROM OUTSIDE",
           "story": "The seed predates the simulation. Someone kept a small possibility of a different world."
+        },
+        {
+          "id": "form-crescent",
+          "kind": "style",
+          "x": 850,
+          "y": 125,
+          "label": "GARDENER FORM",
+          "style": "crescent"
         }
       ],
       "spawns": {

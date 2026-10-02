@@ -235,6 +235,52 @@ test('a standard controller navigates menus, moves, jumps, pauses and opens sett
   pad.axes[0]=1;game.pollGamepad();tick(.2);assert.ok(game.player.vx>0);press(0);tick(.02);assert.ok(game.player.vy<0);release(0);pad.axes[0]=0;game.pollGamepad();
   press(9);tick(.02);release(9);assert.equal(game.state,'help');press(13);release(13);press(0);release(0);assert.equal(game.state,'settings');press(1);release(1);assert.equal(game.state,'play');
 });
+test('combat audio has distinct layered cues, bounded voices, cleanup, and respects mute',()=>{
+  const nodes=[],buffers=[];let audio;
+  const param=()=>({value:0,events:[],setValueAtTime(v,t){this.events.push([v,t]);},exponentialRampToValueAtTime(v,t){this.events.push([v,t]);},setTargetAtTime(v,t){this.events.push([v,t]);}});
+  const node=kind=>{const n={kind,frequency:param(),gain:param(),Q:param(),connect(to){this.target=to;},disconnect(){this.disconnected=true;},start(t){this.started=t;},stop(t){this.stopped=t;}};nodes.push(n);return n;};
+  class AudioContext{
+    constructor(){audio=this;this.state='running';this.currentTime=0;this.sampleRate=8000;this.destination={};}
+    createGain(){return node('gain');}createOscillator(){return node('osc');}createBufferSource(){return node('noise');}createBiquadFilter(){return node('filter');}
+    createBuffer(channels,length){const data=new Float32Array(length),b={getChannelData:()=>data};buffers.push(b);return b;}
+  }
+  const {game,click}=boot(new Map(),false,{window:{AudioContext}});game.startRun();
+  game.combatSfx('heavy');assert.equal(nodes.length,0);click('soundBtn');
+  const signatures=new Set();
+  for(const name of Object.keys(game.combatSounds)){
+    audio.currentTime+=1;const before=nodes.length;game.combatSfx(name);const created=nodes.slice(before),sources=created.filter(n=>n.kind==='osc'||n.kind==='noise');
+    assert.ok(sources.length>=2,name);assert.ok(sources.every(n=>n.stopped>n.started&&n.stopped-n.started<1));
+    signatures.add(JSON.stringify(game.combatSounds[name]));
+    const unchanged=nodes.length;game.combatSfx(name);assert.equal(nodes.length,unchanged,'same-frame duplicates are suppressed');
+    for(const source of sources){source.onended();assert.ok(source.disconnected);assert.ok(source.target.disconnected);}
+  }
+  assert.equal(signatures.size,Object.keys(game.combatSounds).length);assert.equal(buffers.length,1,'noise is cached');
+  for(let i=0;i<100;i++){audio.currentTime+=.1;game.combatSfx('heavy');}
+  const capped=nodes.length;audio.currentTime+=1;game.combatSfx('heavy');assert.equal(nodes.length,capped);
+  click('soundBtn');const muted=nodes.length;game.combatSfx('detonate');assert.equal(nodes.length,muted);
+});
+
+test('exploration unlocks forms permanently and only a completed bench rest permits equipment changes',()=>{
+  const {game,tick,store,click}=boot();game.startRun();
+  for(const zone of ['belfry','lungs','garden']){game.loadRoom(zone);const pickup=game.world.interactions.find(o=>o.kind==='style');assert.ok(pickup);game.interact(pickup);game.interact(pickup);}
+  assert.equal(game.save.styles.length,3);assert.equal(game.save.style,null);assert.equal(game.equipStyle('needle'),false);
+  game.loadRoom('wake');tick(.1);const bench=game.world.interactions.find(o=>o.kind==='bench');Object.assign(game.player,{x:bench.x-11,y:412,grounded:true});game.interact(bench);
+  assert.equal(game.equipStyle('needle'),false);tick(.6);game.showStyleMenu();click('style-needle');assert.equal(game.save.style,'needle');click('stylesDone');
+  const loaded=boot(store);assert.equal(loaded.game.save.styles.length,3);assert.equal(loaded.game.save.style,'needle');loaded.click('continueBtn');assert.equal(loaded.game.equipStyle(null),true);assert.equal(loaded.game.save.style,null);
+  loaded.game.interact(loaded.game.world.interactions.find(o=>o.kind==='bench'));assert.equal(loaded.game.equipStyle('breaker'),false);
+  loaded.game.die('test');assert.equal(boot(loaded.store).game.save.styles.length,3);
+});
+
+test('forms change reach, timing, directional attacks, rear coverage and stagger',()=>{
+  function setup(style){const b=boot();b.game.startRun();b.game.enemies.length=0;b.game.setSave({style,styles:['needle','crescent','breaker']});Object.assign(b.game.player,{x:400,y:412,dir:1,grounded:true});return b;}
+  function target(game,x){const e=game.enemy(x,'sentinel');e.hp=e.max=100;e.y=412;game.enemies.push(e);return e;}
+  const base=setup(null),needle=setup('needle');const a=target(base.game,490),b=target(needle.game,490);base.game.attack();needle.game.attack();assert.equal(a.hp,100);assert.ok(b.hp<100);assert.ok(needle.game.player.attackCd<base.game.player.attackCd);
+  const sweep=setup('crescent'),rear=target(sweep.game,345);sweep.game.player.combo=2;sweep.game.player.comboTime=.5;sweep.game.attack();assert.ok(rear.hp<100);
+  const hammer=setup('breaker'),front=target(hammer.game,435);hammer.game.attack();assert.ok(front.stagger>=.5);assert.ok(hammer.game.player.attackCd>base.game.player.attackCd);
+  const vertical=setup('needle'),above=target(vertical.game,400);above.y=335;vertical.game.keys.add('w');vertical.game.attack();assert.ok(above.hp<100);
+  const heavy=setup('needle'),far=target(heavy.game,535);heavy.game.attack(true);assert.ok(far.hp<100);
+});
+
 test('audio schedules music and routes it through saved volume controls',()=>{
   const notes=[],levels=[];class AudioContext{constructor(){this.state='running';this.currentTime=0;this.destination={};}createGain(){return{gain:{setTargetAtTime:v=>levels.push(v),setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){}};}createOscillator(){return{frequency:{setValueAtTime:v=>notes.push(v),exponentialRampToValueAtTime(){},set value(v){notes.push(v);}},connect(){},start(){},stop(){}};}}
   const {game,click,tick,element}=boot(new Map(),false,{window:{AudioContext}});game.startRun();click('soundBtn');tick(1);assert.ok(notes.length>4);game.showSettings('play');element('setting-music').oninput({target:{value:'0'}});assert.equal(game.settings.music,0);assert.ok(levels.includes(0));

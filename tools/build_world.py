@@ -76,6 +76,11 @@ for r in rooms:
         if o.get('memory')=='defiance':o['blockedBy']='obedience'
         if o['id']=='archive-east':o['guard']='betrayal-guard'
 
+# Optional combat forms sit on existing traversal platforms, away from main gates.
+by_id['belfry']['interactions'].append(npc('form-needle','style',290,-375,'BELLKEEPER FORM',style='needle'))
+by_id['lungs']['interactions'].append(npc('form-breaker','style',805,65,'ENGINE FORM',style='breaker'))
+by_id['garden']['interactions'].append(npc('form-crescent','style',850,125,'GARDENER FORM',style='crescent'))
+
 data={'version':2,'start':'wake','areas':['THE WAKE','THE CRADLE','THE LAST GARDEN','THE CHOIR'],'rooms':rooms}
 (ROOT/'data').mkdir(exist_ok=True)
 (ROOT/'data'/'world.json').write_text(json.dumps(data,indent=2),encoding='utf8')
