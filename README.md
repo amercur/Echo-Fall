@@ -40,13 +40,25 @@ In Windows PowerShell, use `npm.cmd start` and `npm.cmd test` if the PowerShell 
 - When you die, choose **one decision** to preserve. Undecided runs leave the will to return.
 - Keep at most **five memories**, and equip one combat identity before a run or beside a signal anchor.
 - Remembered decisions change future worlds. Forgetting removes their influence when the next run is constructed.
-- Mercy has a delayed consequence: the creature returns after three loop transfers.
+- MERCY returns the creature in the next life and opens a root passage. After three transfers it can also help against a boss. Remembering EMBER closes the roots.
 - Defeat the King by breaking his prediction with aerial strikes, dash follow-ups, charged cuts, and deflects. Cash out accumulated strain with an imprint.
 - The Mother brings past selves into combat. The Child can only be persuaded.
 - Reach three main endings, or discover a fourth through remembered care and respect for Echoes.
-- Memories, loop count, abandoned bodies, and discovered endings save in browser local storage. An unfinished run does not resume after reloading.
+- Memories, loop count, abandoned bodies, and endings save in browser local storage. Completing a bench rest also saves the current run; choose **Continue from Bench** after reloading. Progress since the last rest is not restored. Death clears that checkpoint.
 
-This is a vertical slice: procedural levels, a full campaign, gamepad controls, and a broader Echo personality simulation are future work. The Wanderer has 32 Blender poses for idle, running, jumping, attacks, and guarding. Sentinels, lancers, drones, the King, and the Mother have separate Blender models and eight poses each. Enemies use readable fixed patterns; the preserved decisions and their consequences are authored rather than generated. Sound is optional and synthesized locally. Web fonts are decorative; system fonts work offline.
+This is a vertical slice: procedural levels, a full campaign, and a broader Echo personality simulation are future work. The Wanderer has 40 Blender poses for idle, running, jumping, attacks, guarding, and sitting. Sentinels, lancers, drones, the King, and the Mother have separate Blender models and eight poses each. Enemies use readable fixed patterns; the preserved decisions and their consequences are authored rather than generated. Sound is optional and synthesized locally. Web fonts are decorative; system fonts work offline.
+
+### Prototype 05 chapter improvements
+
+1. **Opening loop:** movement objectives, a practice warden that cannot deal a fatal blow, a first decision, and optional transfer glass to reveal its consequence.
+2. **Enemy behavior:** sentinels protect nearby allies; missed lancer attacks expose them longer; Echoes recognize you. Stagger, guard, and defeat reactions improve readability.
+3. **Exploration:** a bell tower, Cistern turbine, preserved bodies, garden roots, and three hidden records give rooms distinct landmarks and traversal rewards.
+4. **Memory tradeoffs:** MERCY and EMBER conflict over a root route; ORDER seals DEFIANCE routes; BETRAYAL adds an Archive guardian that KINSHIP can negotiate with.
+5. **Boss phases:** the King changes rhythm as you break his predictions. The Mother recalls identities from your archive with their own abilities.
+6. **Sound:** synthesized area music, quieter bench music, footsteps, attack cues, and ambient water, machinery, and garden sounds. Enable sound with the speaker button or Settings.
+7. **Controls and saves:** remappable keyboard controls, standard controller support, separate volume sliders, adjustable screen shake, and bench continuation.
+
+Open Settings with the gear button or through the pause menu. Controller defaults: left stick / D-pad move and aim, A jump, X attack, B dash, Y interact, LB deflect, RB imprint, LT memory, RT mend, View map, Menu pause. Use up/down and A in menus; left/right adjusts a focused slider, and B returns. Keyboard labels in the controls screen reflect remapping; some world prompts still show default keys.
 
 ### Prototype 04 polish
 
@@ -67,7 +79,7 @@ Red telegraphs require an evasive jump or a **charged F release**. Hold for roug
 
 Movement supports acceleration, buffered jumps, coyote time, variable jump height, wall slides and wall jumps, one air dash, downward-strike bounces, and a memory-specific double jump. Landing, wall jumping, pogoing, and aerial deflecting refresh your aerial options. Dash cancels attack recovery. Spike falls cost integrity and return you to safe footing; a fatal hit still triggers the memory extraction loop.
 
-The map is available with **M**. Enemy defeats, opened shortcuts, and boss victories persist when you backtrack during a run. A transfer rebuilds that run. Signal anchors heal and let you change the active memory. The breathing passage between the Archive and Lungs exists only while DEFIANCE is remembered.
+The map is available with **M**. Enemy defeats, opened shortcuts, and boss victories persist when you backtrack during a run. A transfer rebuilds that run. Press E at a signal anchor to sit and restore health after the short sitting animation. Press E to stand, or move, jump, or attack to leave immediately. Incoming damage interrupts rest. You can change the active memory beside an anchor. The breathing passage between the Archive and Lungs exists while DEFIANCE is remembered and ORDER is forgotten.
 
 The reference direction comes from [Nine Sols' close-range deflection combat](https://shop.redcandlegames.com/projects/ninesols) and [Hollow Knight's interconnected exploration](https://www.hollowknight.com/). ECHO//FALL uses its own world, characters, geometry, visuals, and memory-based progression.
 
@@ -82,9 +94,9 @@ npm test
 npm run check
 ```
 
-The tests exercise movement, a complete shaft climb, solid collisions, directional combat, deflect timing, charged counters, projectile returns, imprints, healing, room transitions, memory persistence, boss rules, endings, map connectivity, and sprite bounds. They use a minimal DOM/Canvas harness; hands-on browser playtesting remains a separate step.
+The tests exercise movement, a complete shaft climb, solid collisions, directional combat, deflect timing, charged counters, projectile returns, imprints, healing, room transitions, memory persistence, boss rules, endings, map connectivity, and sprite bounds. They also cover the opening lesson, memory conflicts, enemy roles, boss phases, bench reloads, remapping, simulated controller input, and audio routing. They use a minimal DOM/Canvas harness; hands-on browser playtesting remains a separate step.
 
-For offline visual review, run `npm install` then `npm run review`. This uses the development-only `@napi-rs/canvas` renderer to execute the game's drawing commands and save five scenes in `art-review/`. It does not require a browser and does not replace hands-on playtesting. Playing the game still requires no package installation.
+For offline visual review, run `npm install` then `npm run review`. This uses the development-only `@napi-rs/canvas` renderer to execute the game's drawing commands and save gameplay, seated-rest, and projectile scenes in `art-review/`. It does not require a browser and does not replace hands-on playtesting. Playing the game still requires no package installation.
 
 ## Files
 
@@ -97,4 +109,4 @@ For offline visual review, run `npm install` then `npm run review`. This uses th
 - `tools/`: Blender generation/export and a dependency-free PNG atlas packer.
 - `assets/`: bundled sprites, manifest, and visual previews.
 
-Save data belongs to the browser and origin used to play. Opening the file directly and using the local server create separate archives. Remove the `echo-fall-v1` local storage entry to start over completely.
+Save data belongs to the browser and origin used to play. Opening the file directly and using the local server create separate archives. Remove the `echo-fall-v1` local storage entry to start over completely. Controls and audio preferences use `echo-fall-settings`. Clearing browser data removes both. Controller hardware and audio balance still need hands-on testing.

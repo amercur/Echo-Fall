@@ -1,7 +1,7 @@
 [
   {
     "id": "wake",
-    "name": "wake",
+    "name": "wake.001",
     "width": 1120,
     "ground": [
       [
@@ -35,7 +35,7 @@
   },
   {
     "id": "belfry",
-    "name": "belfry",
+    "name": "belfry.001",
     "width": 970,
     "ground": [
       [
@@ -46,6 +46,12 @@
       ]
     ],
     "platforms": [
+      [
+        165,
+        -345,
+        165,
+        20
+      ],
       [
         210,
         355,
@@ -100,7 +106,7 @@
   },
   {
     "id": "cistern",
-    "name": "cistern",
+    "name": "cistern.001",
     "width": 1360,
     "ground": [
       [
@@ -124,6 +130,12 @@
         20
       ],
       [
+        605,
+        235,
+        130,
+        18
+      ],
+      [
         1000,
         270,
         100,
@@ -134,7 +146,7 @@
   },
   {
     "id": "archive",
-    "name": "archive",
+    "name": "archive.001",
     "width": 1160,
     "ground": [
       [
@@ -168,7 +180,7 @@
   },
   {
     "id": "procession",
-    "name": "procession",
+    "name": "procession.001",
     "width": 1590,
     "ground": [
       [
@@ -214,7 +226,7 @@
   },
   {
     "id": "king",
-    "name": "king",
+    "name": "king.001",
     "width": 1280,
     "ground": [
       [
@@ -242,7 +254,7 @@
   },
   {
     "id": "cradle",
-    "name": "cradle",
+    "name": "cradle.001",
     "width": 1470,
     "ground": [
       [
@@ -282,7 +294,7 @@
   },
   {
     "id": "lungs",
-    "name": "lungs",
+    "name": "lungs.001",
     "width": 1250,
     "ground": [
       [
@@ -335,7 +347,7 @@
   },
   {
     "id": "mother",
-    "name": "mother",
+    "name": "mother.001",
     "width": 1370,
     "ground": [
       [
@@ -369,7 +381,7 @@
   },
   {
     "id": "garden",
-    "name": "garden",
+    "name": "garden.001",
     "width": 1430,
     "ground": [
       [
@@ -393,6 +405,12 @@
         20
       ],
       [
+        735,
+        160,
+        125,
+        20
+      ],
+      [
         930,
         350,
         150,
@@ -403,7 +421,7 @@
   },
   {
     "id": "observatory",
-    "name": "observatory",
+    "name": "observatory.001",
     "width": 1050,
     "ground": [
       [
@@ -431,7 +449,7 @@
   },
   {
     "id": "choir",
-    "name": "choir",
+    "name": "choir.001",
     "width": 1420,
     "ground": [
       [

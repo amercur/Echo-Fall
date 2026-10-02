@@ -49,7 +49,16 @@
       ],
       "solids": [],
       "hazards": [],
-      "enemies": [],
+      "enemies": [
+        {
+          "x": 570,
+          "type": "sentinel",
+          "floor": 452,
+          "left": 520,
+          "right": 645,
+          "training": true
+        }
+      ],
       "interactions": [
         {
           "id": "rest-wake",
@@ -61,7 +70,7 @@
         {
           "id": "creature",
           "kind": "creature",
-          "x": 440,
+          "x": 900,
           "y": 422,
           "label": "THE WOUNDED"
         },
@@ -101,6 +110,13 @@
           "entry": "west",
           "label": "THE LONG WAY HOME",
           "requires": "well-link"
+        },
+        {
+          "id": "first-transfer",
+          "kind": "mirror",
+          "x": 1010,
+          "y": 417,
+          "label": "THE TRANSFER GLASS"
         }
       ],
       "spawns": {
@@ -139,6 +155,16 @@
           "x": 740,
           "y": 95,
           "text": "AN UPPER ROAD WAITS"
+        },
+        {
+          "x": 145,
+          "y": 332,
+          "text": "E / SIT AT THE SIGNAL ANCHOR"
+        },
+        {
+          "x": 555,
+          "y": 382,
+          "text": "THE PRACTICE WARDEN CANNOT TAKE YOUR LAST INTEGRITY"
         }
       ]
     },
@@ -197,6 +223,12 @@
           -360,
           230,
           22
+        ],
+        [
+          165,
+          -345,
+          165,
+          20
         ]
       ],
       "solids": [
@@ -248,6 +280,14 @@
           "x": 635,
           "y": -120,
           "label": "A RESONANCE VESSEL"
+        },
+        {
+          "id": "bell-secret",
+          "kind": "relic",
+          "x": 230,
+          "y": -380,
+          "label": "THE BELL KEEPER",
+          "story": "Before the Choir, this bell rang when someone made a choice. Its clapper is worn down to a thread."
         }
       ],
       "spawns": {
@@ -327,6 +367,12 @@
           270,
           100,
           20
+        ],
+        [
+          605,
+          235,
+          130,
+          18
         ]
       ],
       "solids": [],
@@ -388,6 +434,25 @@
           "x": 1040,
           "y": 235,
           "label": "A RESONANCE VESSEL"
+        },
+        {
+          "id": "pogo-secret",
+          "kind": "relic",
+          "x": 670,
+          "y": 200,
+          "label": "THE DROWNED ENGINEER",
+          "story": "The engineer left a note above the flood: machines repeat a command. People can decide to stop."
+        },
+        {
+          "id": "root-ascent",
+          "kind": "gate",
+          "x": 680,
+          "y": 200,
+          "target": "archive",
+          "entry": "root",
+          "label": "THE LIVING ROOT",
+          "memory": "mercy",
+          "blockedBy": "fire"
         }
       ],
       "spawns": {
@@ -402,6 +467,10 @@
         "east": [
           1270,
           290
+        ],
+        "root": [
+          655,
+          195
         ]
       },
       "decor": [
@@ -521,7 +590,8 @@
           "target": "procession",
           "entry": "high",
           "label": "THE ARCHIVE LIFT",
-          "requires": "archive-lift"
+          "requires": "archive-lift",
+          "guard": "betrayal-guard"
         },
         {
           "id": "archive-memory",
@@ -531,7 +601,8 @@
           "target": "lungs",
           "entry": "archive",
           "label": "THE BREATHING PASSAGE",
-          "memory": "defiance"
+          "memory": "defiance",
+          "blockedBy": "obedience"
         },
         {
           "id": "archive-rest",
@@ -539,6 +610,17 @@
           "x": 600,
           "y": 425,
           "label": "SIGNAL ANCHOR"
+        },
+        {
+          "id": "root-descent",
+          "kind": "gate",
+          "x": 710,
+          "y": 417,
+          "target": "cistern",
+          "entry": "root",
+          "label": "THE LIVING ROOT",
+          "memory": "mercy",
+          "blockedBy": "fire"
         }
       ],
       "spawns": {
@@ -557,6 +639,10 @@
         "memory": [
           810,
           130
+        ],
+        "root": [
+          700,
+          412
         ]
       },
       "decor": [
@@ -655,6 +741,13 @@
           "floor": 265,
           "left": 1140,
           "right": 1340
+        },
+        {
+          "x": 1050,
+          "type": "sentinel",
+          "floor": 452,
+          "left": 890,
+          "right": 1120
         }
       ],
       "interactions": [
@@ -1090,7 +1183,8 @@
           "target": "archive",
           "entry": "memory",
           "label": "THE BREATHING PASSAGE",
-          "memory": "defiance"
+          "memory": "defiance",
+          "blockedBy": "obedience"
         },
         {
           "id": "lungs-lever",
@@ -1289,6 +1383,12 @@
           350,
           150,
           20
+        ],
+        [
+          735,
+          160,
+          125,
+          20
         ]
       ],
       "solids": [],
@@ -1336,6 +1436,14 @@
           "entry": "west",
           "label": "THE CHOIR WAITS",
           "requires": "child"
+        },
+        {
+          "id": "root-secret",
+          "kind": "relic",
+          "x": 800,
+          "y": 125,
+          "label": "A SEED FROM OUTSIDE",
+          "story": "The seed predates the simulation. Someone kept a small possibility of a different world."
         }
       ],
       "spawns": {

@@ -49,6 +49,33 @@ rooms.append(z)
 # This return gate materializes after the long loop has been opened from beyond.
 rooms[0]['interactions'].append(door('wake-return',935,417,'observatory','west','THE LONG WAY HOME',requires='well-link'))
 
+# Rest, movement and safe combat lead into the first decision.
+wake=rooms[0]
+next(o for o in wake['interactions'] if o['id']=='creature')['x']=900
+wake['enemies']=[dict(foe(570,'sentinel',452,520,645),training=True)]
+wake['interactions'].append(npc('first-transfer','mirror',1010,417,'THE TRANSFER GLASS'))
+wake['tutorials'] += [dict(x=145,y=332,text='E / SIT AT THE SIGNAL ANCHOR'),dict(x=555,y=382,text='THE PRACTICE WARDEN CANNOT TAKE YOUR LAST INTEGRITY')]
+
+# Optional traversal rewards and regional landmarks.
+by_id={r['id']:r for r in rooms}
+by_id['belfry']['platforms'].append([165,-345,165,20])
+by_id['belfry']['interactions'].append(npc('bell-secret','relic',230,-380,'THE BELL KEEPER',story='Before the Choir, this bell rang when someone made a choice. Its clapper is worn down to a thread.'))
+by_id['cistern']['platforms'].append([605,235,130,18])
+by_id['cistern']['interactions'].append(npc('pogo-secret','relic',670,200,'THE DROWNED ENGINEER',story='The engineer left a note above the flood: machines repeat a command. People can decide to stop.'))
+by_id['garden']['platforms'].append([735,160,125,20])
+by_id['garden']['interactions'].append(npc('root-secret','relic',800,125,'A SEED FROM OUTSIDE',story='The seed predates the simulation. Someone kept a small possibility of a different world.'))
+by_id['procession']['enemies'].append(foe(1050,'sentinel',452,890,1120))
+
+# Remembered choices change the route graph as well as combat.
+by_id['cistern']['spawns']['root']=[655,195]
+by_id['archive']['spawns']['root']=[700,412]
+by_id['cistern']['interactions'].append(door('root-ascent',680,200,'archive','root','THE LIVING ROOT',memory='mercy',blockedBy='fire'))
+by_id['archive']['interactions'].append(door('root-descent',710,417,'cistern','root','THE LIVING ROOT',memory='mercy',blockedBy='fire'))
+for r in rooms:
+    for o in r['interactions']:
+        if o.get('memory')=='defiance':o['blockedBy']='obedience'
+        if o['id']=='archive-east':o['guard']='betrayal-guard'
+
 data={'version':2,'start':'wake','areas':['THE WAKE','THE CRADLE','THE LAST GARDEN','THE CHOIR'],'rooms':rooms}
 (ROOT/'data').mkdir(exist_ok=True)
 (ROOT/'data'/'world.json').write_text(json.dumps(data,indent=2),encoding='utf8')

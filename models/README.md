@@ -13,7 +13,7 @@ python tools/pack_bestiary.py
 
 To rebuild the bestiary from the authored modeling script, run Blender with `--background --python tools/build_bestiary.py`, then run the packer. This replaces `bestiary.blend`.
 
-The Wanderer's 32-pose atlas is sampled from the rig in `echo-fall.blend`, with interpolated poses and a cyclic running seam:
+The Wanderer's 40-pose atlas is sampled from the rig in `echo-fall.blend`, with interpolated poses, a cyclic running seam, and eight sitting poses (atlas frames 32–39):
 
 ```powershell
 & 'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe' --background models/echo-fall.blend --python tools/render_wanderer_smooth.py

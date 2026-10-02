@@ -12,21 +12,35 @@ rig=[o for o in s.objects if o.name.startswith('RIG /')]
 poses={}
 for frame in range(1,17):
     s.frame_set(frame);poses[frame]={o.name:(o.location.copy(),o.rotation_euler.copy()) for o in rig}
+# Render reevaluates animation curves: detach them in this temporary session
+# so the sampled in-betweens and seated poses survive evaluation. Source is not saved.
+for o in rig:o.animation_data_clear()
 samples=[(i,i,0) for i in range(1,5)]
 samples += [(5+i//2,5+(i//2+1)%8,(i%2)*.5) for i in range(16)]
 samples += [(13,13,0),(13,13,0)]
 samples += [(14+min(1,int(i*2/7)),15+min(1,int(i*2/7)),min(1,i*2/7-min(1,int(i*2/7)))) for i in range(8)]
 samples += [(14,15,.5),(14,15,.7)]
+samples += [(1,1,0)]*8
 for index,(a,b,t) in enumerate(samples):
     s.frame_set(a)
     for o in rig:
         la,ra=poses[a][o.name];lb,rb=poses[b][o.name]
         o.location=la.lerp(lb,t);o.rotation_euler=Vector(ra).lerp(Vector(rb),t)
-    if index>=30:
+    if 30<=index<32:
         for o in rig:
             if o.name=='RIG / near shoulder':o.rotation_euler.y=-1.3
             if o.name=='RIG / near elbow':o.rotation_euler.y=-.7
+    if index>=32:
+        sit=(index-32)/7;sit=sit*sit*(3-2*sit)
+        for o in rig:
+            if o.name=='RIG / body root':o.location.z=-.30*sit;o.rotation_euler.y=.06*sit
+            if o.name.endswith(' hip'):o.rotation_euler.y=-1.45*sit
+            if o.name.endswith(' knee'):o.rotation_euler.y=1.50*sit
+            if o.name.endswith(' shoulder'):o.rotation_euler.y=-.65*sit
+            if o.name.endswith(' elbow'):o.rotation_euler.y=-.9*sit
+            if o.name=='RIG / head':o.rotation_euler.y=.15*sit
     bpy.context.view_layer.update();s.render.filepath=str(out/f'wanderer-{index:02}.png');bpy.ops.render.render(write_still=True)
 s.frame_set(1);bpy.context.view_layer.update();p=world_to_camera_view(s,s.camera,Vector((0,0,0)))
 meta={'player':{'file':'assets/wanderer-smooth.png','cell':192,'columns':4,'anchor':[round(p.x*192,3),round((1-p.y)*192,3)],'scale':.34,'states':{'idle':list(range(4)),'run':list(range(4,20)),'jump':[20,21],'attack':list(range(22,30)),'guard':[30,31]}}}
+meta['player']['states']['rest']=list(range(32,40))
 (ROOT/'assets'/'wanderer-smooth.json').write_text(json.dumps(meta,indent=2));print('WANDERER_INBETWEENS_READY',flush=True)

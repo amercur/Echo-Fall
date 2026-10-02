@@ -83,7 +83,7 @@ test('deflecting a projectile returns it to its shooter',()=>{
   assert.equal(game.shots[0].friendly,true);assert.equal(game.shots[0].reflected,true);assert.ok(game.shots[0].vx>0);
 });
 test('imprints spend stored Resonance and detonate the target strain',()=>{
-  const {game}=boot();game.startRun();const e=game.enemy(160,'lancer');e.hp=30;e.max=30;e.strain=5;game.enemies.push(e);game.player.resonance=2;
+  const {game}=boot();game.startRun();game.enemies.length=0;const e=game.enemy(160,'lancer');e.hp=30;e.max=30;e.strain=5;game.enemies.push(e);game.player.resonance=2;
   assert.equal(game.imprintAttack(),true);assert.equal(game.player.resonance,0);assert.equal(game.imprint.charge,2);game.imprintAttack();assert.equal(e.hp,18);assert.equal(e.strain,0);assert.equal(game.imprint,null);
   game.player.resonance=1;game.player.x=600;assert.equal(game.imprintAttack(),false);assert.equal(game.player.resonance,1);
 });
@@ -105,7 +105,7 @@ test('one chosen decision survives a transfer and reload',()=>{
   const loaded=boot(store);loaded.game.startRun();assert.equal(loaded.game.world.interactions.some(o=>o.kind==='creature'),false);assert.equal(loaded.game.remembered('defiance'),false);
 });
 test('five-memory capacity and forgetting remove the breathing passage and its geometry',()=>{
-  const {game,click}=boot();game.setSave({archive:['return','mercy','fire','defiance','obedience'].map(id=>({id,loop:1})),active:'defiance',loop:3});game.startRun();game.loadRoom('archive');assert.equal(game.doorOpen(game.world.interactions.find(o=>o.memory)),true);
+  const {game,click}=boot();game.setSave({archive:['return','mercy','fire','defiance','sacrifice'].map(id=>({id,loop:1})),active:'defiance',loop:3});game.startRun();game.loadRoom('archive');assert.equal(game.doorOpen(game.world.interactions.find(o=>o.memory)),true);
   game.recordDecision('respect');game.die('test');click('extract-respect');assert.equal(game.state,'forget');click('forget-defiance');click('choice-0');assert.equal(game.save.archive.length,5);assert.equal(game.save.loop,4);
   game.startRun();game.loadRoom('archive');assert.equal(game.doorOpen(game.world.interactions.find(o=>o.memory)),false);assert.equal(game.world.platforms.some(p=>p.x===620&&p.w===90),false);
 });
@@ -149,6 +149,27 @@ test('all Blender sprites render within atlas bounds in every room and combat po
 test('old archives and malformed saves still start safely',()=>{
   const {game}=boot(new Map([['echo-fall-v1','{broken']]));assert.equal(game.save.loop,1);game.startRun();assert.equal(game.zoneId,'wake');
 });
+test('bench rest seats the player, heals once, and exits with E or movement',()=>{
+  const {game,tick,down,up,drawnImages}=boot(new Map(),true);game.startRun();tick(.1);
+  const bench=game.world.interactions.find(o=>o.kind==='bench');game.player.hp=2;game.interact(bench);tick(.2);
+  assert.ok(game.player.rest);assert.equal(game.player.hp,2,'healing waits for the sitting animation');tick(.35);
+  assert.equal(game.player.hp,6);assert.ok(game.player.rest.healed);assert.equal(game.player.x,bench.x-11);
+  game.render();assert.ok(drawnImages.some(([img,,sy])=>img.path.endsWith('wanderer-smooth.png')&&sy>=1536),'seated sprite is drawn');
+  down('e');tick(.02);up('e');assert.equal(game.player.rest,null);assert.ok(game.player.standUp>0);tick(.3);
+  game.interact(bench);tick(.5);down('d');tick(.06);assert.equal(game.player.rest,null);assert.ok(game.player.vx>0);
+});
+test('attacks interrupt rest before healing, and airborne characters cannot sit',()=>{
+  const {game,tick}=boot();game.startRun();tick(.1);const bench=game.world.interactions.find(o=>o.kind==='bench');
+  game.player.hp=3;game.player.inv=0;game.interact(bench);tick(.1);game.hurt(1,240);assert.equal(game.player.rest,null);tick(.5);assert.equal(game.player.hp,2);
+  game.player.grounded=false;game.interact(bench);assert.equal(game.player.rest,null);
+});
+test('projectile trails remain bounded and reset when a shot is deflected',()=>{
+  const {game}=boot();game.startRun();const source=game.enemy(800,'drone');
+  const shot={x:500,y:200,vx:100,vy:0,r:7,life:4,friendly:false,color:'#73f0e7',source};game.shots.push(shot);
+  for(let i=0;i<120;i++)game.updateShots(1/120);assert.equal(shot.trail.length,9);assert.equal(shot.r,7);game.render();
+  shot.x=game.player.x+15;shot.y=game.player.y+20;game.player.inv=0;game.player.dir=1;game.beginDeflect();game.updateShots(.001);
+  assert.ok(shot.reflected);assert.equal(shot.trail.length,0);
+});
 test('a tapped follow-up survives recovery and executes once, including after a heavy cut',()=>{
   const {game,tick,down,up}=boot();game.startRun();tick(.1);game.attack(true);tick(.07);
   down('j');tick(.01);up('j');tick(.40);assert.equal(game.player.combo,1);assert.ok(game.player.attackCd>0);
@@ -172,4 +193,49 @@ test('each new bestiary atlas is rendered, with valid attack and recovery frames
   for(const room of ['king','mother']){game.loadRoom(room);game.player.x=500;game.update(.02);game.boss.x=600;game.render();}
   for(const type of ['sentinel','lancer','drone','king','mother'])assert.ok(drawnImages.some(([img])=>img.path.endsWith('/'+type+'.png')),type);
   for(const [img,sx,sy,sw,sh] of drawnImages)assert.ok(sx>=0&&sy>=0&&sx+sw<=img.width&&sy+sh<=img.height,img.path);
+});
+test('the opening practice is nonlethal and its first transfer visibly changes the Wake',()=>{
+  const {game,click,tick}=boot();game.startRun();tick(.1);const warden=game.enemies.find(e=>e.training);
+  game.player.hp=1;game.player.inv=0;game.hurt(1,warden.x,'practice',{source:warden});assert.equal(game.player.hp,1);assert.equal(game.state,'play');
+  game.player.inv=0;game.player.dir=1;game.beginDeflect();game.hurt(1,warden.x,'practice',{source:warden});assert.ok(game.flags.learnDeflect);assert.equal(warden.hp,0);
+  game.player.hp=6;game.interact(game.world.interactions.find(o=>o.kind==='creature'));click('choice-0');game.interact(game.world.interactions.find(o=>o.kind==='mirror'));click('choice-0');click('extract-mercy');game.startRun();
+  assert.ok(game.world.interactions.some(o=>o.kind==='returned'));assert.equal(game.enemies.some(e=>e.training),false);
+});
+test('sentinels protect allies, heavy hits bypass protection, and missed lances recover longer',()=>{
+  const {game}=boot();game.startRun();game.enemies.length=0;const s=game.enemy(230),ally=game.enemy(270,'lancer');game.enemies.push(s,ally);game.player.x=110;game.updateEnemies(.01);assert.ok(s.guarding);
+  game.hitEnemy(ally,4,0,.12);assert.ok(ally.hp>ally.max-2);const before=ally.hp;game.hitEnemy(ally,4,0,.6);assert.equal(ally.hp,before-4);
+  Object.assign(ally,{stagger:0,phase:'strike',timer:0,vx:0,connected:false});game.player.x=700;game.updateEnemies(.01);assert.equal(ally.phase,'recover');assert.equal(ally.timer,1.5);
+});
+test('mercy and ember conflict at the root route; order closes defiance and betrayal guards a lift',()=>{
+  const {game,click}=boot();game.setSave({archive:[{id:'mercy',loop:1}]});game.startRun();game.loadRoom('cistern');let gate=game.world.interactions.find(o=>o.id==='root-ascent');assert.ok(game.doorOpen(gate));
+  game.setSave({archive:[{id:'mercy',loop:1},{id:'fire',loop:1}]});assert.equal(game.doorOpen(gate),false);
+  game.setSave({archive:[{id:'defiance',loop:1},{id:'obedience',loop:1},{id:'betrayal',loop:1},{id:'respect',loop:1}]});game.loadRoom('archive');assert.equal(game.doorOpen(game.world.interactions.find(o=>o.memory==='defiance')),false);
+  gate=game.world.interactions.find(o=>o.guard);game.flags['archive-lift']=true;assert.equal(game.doorOpen(gate),false);assert.ok(game.enemies.some(e=>e.guardId));game.interact(gate);click('choice-0');assert.ok(game.doorOpen(gate));
+});
+test('the King changes rhythm and the Mother recalls actual archived abilities',()=>{
+  const {game,tick}=boot();game.startRun();game.loadRoom('king');game.player.x=340;game.player.inv=100;tick(.05);game.boss.breaks=3;game.updateBoss(.01);assert.equal(game.boss.stage,2);assert.equal(game.boss.phase,'transition');
+  game.setSave({archive:[{id:'fire',loop:1}]});game.loadRoom('mother');game.player.x=500;game.player.inv=100;tick(.1);Object.assign(game.boss,{hp:20,stage:1});game.updateBoss(.01);assert.equal(game.boss.stage,2);tick(6);
+  const echo=game.enemies.find(e=>e.memory==='fire');assert.ok(echo);Object.assign(echo,{recognized:true,phase:'walk',skillCd:0,x:game.player.x+150,y:game.player.y});game.updateEnemies(.01);assert.ok(game.shots.some(s=>s.source===echo&&s.color==='#ffa16b'));
+});
+test('bench continuation restores decisions, shortcuts, defeated enemies and active identity across reload',()=>{
+  const {game,tick,store}=boot();game.setSave({archive:[{id:'mercy',loop:1}],active:'mercy',loop:2});game.startRun();game.loadRoom('procession');game.enemies[0].hp=0;game.flags['archive-lift']=true;game.recordDecision('defiance');game.enterZone('archive');
+  const bench=game.world.interactions.find(o=>o.kind==='bench');Object.assign(game.player,{x:bench.x-11,y:412,grounded:true});game.interact(bench);tick(.6);assert.ok(game.checkpointValid());
+  const loaded=boot(store);assert.match(loaded.element('overlayCard').innerHTML,/CONTINUE FROM BENCH/);loaded.click('continueBtn');assert.equal(loaded.game.zoneId,'archive');assert.equal(loaded.game.save.active,'mercy');assert.ok(loaded.game.decisions.includes('defiance'));assert.ok(loaded.game.flags['archive-lift']);assert.ok(loaded.game.player.rest.healed);
+  loaded.game.enterZone('procession');assert.equal(loaded.game.enemies[0].hp,0);loaded.game.die('test');assert.equal(loaded.game.save.checkpoint,null);
+});
+test('settings persist remapped controls and reject duplicate bindings',()=>{
+  const {game,click,down,up,tick,store,element}=boot();game.startRun();game.showSettings('play');click('bind-5');down('v');up('v');assert.equal(game.mappedKey('v'),'j');assert.equal(game.mappedKey('j'),null);
+  click('bind-6');down('v');up('v');assert.match(element('bindingStatus').textContent,/Already used/);down('escape');up('escape');element('setting-shake').oninput({target:{value:'0'}});click('settingsDone');
+  down('v');tick(.02);up('v');assert.ok(game.player.attackCd>0);const loaded=boot(store);assert.equal(loaded.game.settings.shake,0);assert.equal(loaded.game.mappedKey('v'),'j');
+});
+test('a standard controller navigates menus, moves, jumps, pauses and opens settings',()=>{
+  const pad={connected:true,mapping:'standard',axes:[0,0],buttons:Array.from({length:16},()=>({pressed:false,value:0}))};const {game,tick}=boot(new Map(),false,{gamepads:[pad]});
+  const press=i=>{pad.buttons[i].pressed=true;game.pollGamepad();},release=i=>{pad.buttons[i].pressed=false;game.pollGamepad();};
+  press(0);release(0);assert.equal(game.state,'loadout');press(0);release(0);assert.equal(game.state,'play');tick(.1);
+  pad.axes[0]=1;game.pollGamepad();tick(.2);assert.ok(game.player.vx>0);press(0);tick(.02);assert.ok(game.player.vy<0);release(0);pad.axes[0]=0;game.pollGamepad();
+  press(9);tick(.02);release(9);assert.equal(game.state,'help');press(13);release(13);press(0);release(0);assert.equal(game.state,'settings');press(1);release(1);assert.equal(game.state,'play');
+});
+test('audio schedules music and routes it through saved volume controls',()=>{
+  const notes=[],levels=[];class AudioContext{constructor(){this.state='running';this.currentTime=0;this.destination={};}createGain(){return{gain:{setTargetAtTime:v=>levels.push(v),setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){}};}createOscillator(){return{frequency:{setValueAtTime:v=>notes.push(v),exponentialRampToValueAtTime(){},set value(v){notes.push(v);}},connect(){},start(){},stop(){}};}}
+  const {game,click,tick,element}=boot(new Map(),false,{window:{AudioContext}});game.startRun();click('soundBtn');tick(1);assert.ok(notes.length>4);game.showSettings('play');element('setting-music').oninput({target:{value:'0'}});assert.equal(game.settings.music,0);assert.ok(levels.includes(0));
 });

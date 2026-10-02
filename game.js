@@ -20,15 +20,21 @@
   const approach = (n, target, step) => n < target ? Math.min(n + step, target) : Math.max(n - step, target);
   const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
   const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const defaultSettings={master:.7,music:.45,sfx:.8,shake:1,sound:false,bindings:{}};
+  const controls={'a':'Move left','d':'Move right','w':'Aim up','s':'Aim down',' ':'Jump','j':'Attack','k':'Dash','f':'Deflect','q':'Imprint','h':'Mend','l':'Memory','e':'Interact','m':'Map','r':'Transfer','escape':'Pause'};
+  const keyName=k=>k===' '?'SPACE':k.toUpperCase();
+  let bindingCapture=null,settingsReturn='title',padHeld=new Set(),keyboardHeld=new Set(),padButtons=new Set(),padAxes=new Set();
+  let settings={...defaultSettings,bindings:{}},mix=null,musicClock=0,musicBeat=0,stepClock=0;
+  try{const stored=JSON.parse(localStorage.getItem('echo-fall-settings'));if(stored){for(const k of ['master','music','sfx','shake'])if(Number.isFinite(stored[k]))settings[k]=clamp(stored[k],0,1);settings.sound=stored.sound===true;if(stored.bindings&&typeof stored.bindings==='object')for(const [k,v] of Object.entries(stored.bindings))if(Object.keys(controls).includes(k)&&typeof v==='string'&&v.length>0&&v.length<20)settings.bindings[k]=v;}}catch{}
   const memories = {
     return: { name: 'The will to return', icon: '◇', short: 'RETURN', color: C.cyan, desc: 'L · Parry an incoming strike. A perfect parry restores integrity.', world: 'Even an empty hand can refuse the end.', ability: 'parry' },
-    mercy: { name: 'The life I spared', icon: '✧', short: 'MERCY', color: C.cyan, desc: 'L · Call a spirit to strike. In three loops, a life will find you.', world: 'The wounded creature is gone. Something small remembers you.', ability: 'spirit' },
+    mercy: { name: 'The life I spared', icon: '✧', short: 'MERCY', color: C.cyan, desc: 'L · Call a spirit to strike. In three loops, a life will find you.', world: 'A life returns, opening roots in the Cistern. Remembering EMBER closes them.', ability: 'spirit' },
     fire: { name: 'The ember I took', icon: '◆', short: 'EMBER', color: '#ffa16b', desc: 'J · Cast fire instead of a blade. L · Release a fireburst.', world: 'Ash grows where a creature once lay.', ability: 'fire' },
     defiance: { name: 'The door I opened', icon: '⌁', short: 'DEFIANCE', color: '#c7a5ff', desc: 'Jump again in the air. L · Blink forward through danger.', world: 'A forbidden path is now part of the world.', ability: 'blink' },
-    obedience: { name: 'The door I sealed', icon: '▣', short: 'ORDER', color: C.gold, desc: 'L · Raise a ward for two seconds. The King recognizes you.', world: 'Order restores a bridge, but strengthens its sovereign.', ability: 'ward' },
+    obedience: { name: 'The door I sealed', icon: '▣', short: 'ORDER', color: C.gold, desc: 'L · Raise a ward for two seconds. The King recognizes you.', world: 'Order restores a bridge, strengthens its sovereign, and seals DEFIANCE paths.', ability: 'ward' },
     sacrifice: { name: 'The blood I gave', icon: '♡', short: 'SACRIFICE', color: C.rose, desc: 'L · Restore two integrity, once per room. The cages open.', world: 'The preserved begin to stir. Someone left the locks undone.', ability: 'heal' },
-    betrayal: { name: 'The hand I betrayed', icon: '╱', short: 'BETRAYAL', color: C.rose, desc: 'Your blade steals life on a kill. L · Strike both directions.', world: 'Keepers withdraw their trust. Old selves sharpen their blades.', ability: 'fury' },
-    respect: { name: 'The voice I heard', icon: '∞', short: 'KINSHIP', color: C.cyan, desc: 'L · Ask your Echo to strike beside you. It answers by choice.', world: 'The abandoned stop pretending to be reflections.', ability: 'echo' },
+    betrayal: { name: 'The hand I betrayed', icon: '╱', short: 'BETRAYAL', color: C.rose, desc: 'Your blade steals life on a kill. L · Strike both directions.', world: 'An old self guards the Archive lift. KINSHIP may persuade it to let you pass.', ability: 'fury' },
+    respect: { name: 'The voice I heard', icon: '∞', short: 'KINSHIP', color: C.cyan, desc: 'L · Ask your Echo to strike beside you. It answers by choice.', world: 'The abandoned may listen. Ask the Archive guardian for passage.', ability: 'echo' },
     abandon: { name: 'The self I abandoned', icon: '∅', short: 'DISTANCE', color: '#a2b3db', desc: 'Dash recharges twice as fast. L · Become untouchable briefly.', world: 'Your old bodies remember which way you walked.', ability: 'phase' }
   };
   function readSave() {
@@ -48,10 +54,11 @@
   let save = readSave(), state = 'title', room = 0, zoneId = 'wake', world, player, camera = 0, cameraY = 0, clock = 0, roomTime = 0;
   let enemies = [], shots = [], particles = [], slash = [], decisions = [], chosen = new Set(), log = [];
   let boss = null, bossStarted = false, bossDefeated = false, shake = 0, deathReason = '', aidTimer = 0;
-  let pendingMemory = null, keys = new Set(), pressed = new Set(), lastTime = 0, toastTimer = 0, sound = false, audio;
+  let pendingMemory = null, keys = new Set(), pressed = new Set(), lastTime = 0, toastTimer = 0, sound = settings.sound, audio;
   let jumpBuffer = 0, coyote = 0, pausedFrom = 'play', childStage = 0, childAttempts = 0, deathsThisSession = 0;
   let released = new Set(), roomCache = new Map(), visited = new Set(), runFlags = {}, hitstop = 0, imprint = null;
   let accumulator = 0, renderAlpha = 1, viewCamera = 0, viewCameraY = 0, ghosts = [], ghostTimer = 0;
+  let remnants=[];
   const STEP = 1 / 120;
   const themes = [
     { name: 'THE WAKE', sector: '01', sub: 'THE KINGDOM OF CERTAINTY', sky: '#111b30', far: '#182a40', mid: '#24384d', accent: C.cyan, width: 2260 },
@@ -62,18 +69,47 @@
   const remembered = id => save.archive.some(m => m.id === id);
   const did = id => remembered(id) || decisions.includes(id);
   const active = id => save.active === id;
-  function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { toast('Archive is temporary: browser storage is unavailable.'); } }
+  function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save));return true; } catch { toast('Archive is temporary: browser storage is unavailable.');return false; } }
   function tone(freq = 300, duration = .08, type = 'sine', volume = .035) {
     if (!sound) return;
     try {
       audio ||= new (window.AudioContext || window.webkitAudioContext)();
+      if(!mix){mix={master:audio.createGain(),music:audio.createGain(),sfx:audio.createGain()};mix.music.connect(mix.master);mix.sfx.connect(mix.master);mix.master.connect(audio.destination);applyMix();}
       if (audio.state === 'suspended') audio.resume();
       const osc = audio.createOscillator(), gain = audio.createGain();
       osc.type = type; osc.frequency.setValueAtTime(freq, audio.currentTime);
       osc.frequency.exponentialRampToValueAtTime(Math.max(30, freq * .55), audio.currentTime + duration);
       gain.gain.setValueAtTime(volume, audio.currentTime); gain.gain.exponentialRampToValueAtTime(.001, audio.currentTime + duration);
-      osc.connect(gain); gain.connect(audio.destination); osc.start(); osc.stop(audio.currentTime + duration);
+      osc.connect(gain); gain.connect(mix.sfx); osc.start(); osc.stop(audio.currentTime + duration);
     } catch { sound = false; }
+  }
+  function noiseSfx(duration=.12,cutoff=1600,volume=.025){
+    if(!sound||!audio||!mix||!audio.createBuffer)return;
+    const buffer=audio.createBuffer(1,Math.ceil(audio.sampleRate*duration),audio.sampleRate),data=buffer.getChannelData(0);
+    for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*(1-i/data.length);
+    const source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain();source.buffer=buffer;filter.type='lowpass';filter.frequency.value=cutoff;
+    gain.gain.setValueAtTime(.0001,audio.currentTime);gain.gain.exponentialRampToValueAtTime(volume,audio.currentTime+.008);gain.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+duration);
+    source.connect(filter);filter.connect(gain);gain.connect(mix.sfx);source.start();source.stop(audio.currentTime+duration);
+  }
+  function applyMix(){if(!mix)return;for(const k of ['master','music','sfx'])mix[k].gain.setTargetAtTime(k==='master'&&!sound?0:settings[k],audio.currentTime,.04);}
+  function saveSettings(){settings.sound=sound;try{localStorage.setItem('echo-fall-settings',JSON.stringify(settings));}catch{}applyMix();}
+  function musicNote(freq,duration,volume=.03,delay=0){
+    if(!audio||!mix||!sound||audio.state!=='running')return;
+    const osc=audio.createOscillator(),gain=audio.createGain(),t=audio.currentTime+delay;osc.type='sine';osc.frequency.value=freq;
+    gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(Math.max(.001,volume),t+Math.min(.3,duration/3));gain.gain.exponentialRampToValueAtTime(.0001,t+duration);
+    osc.connect(gain);gain.connect(mix.music);osc.start(t);osc.stop(t+duration+.05);
+  }
+  function updateSound(dt){
+    if(!sound)return;
+    musicClock-=dt;stepClock-=dt;
+    if(musicClock<=0){
+      musicClock=player?.rest?1.1:bossStarted&&!bossDefeated?.48:.85;
+      const root=[110,98,130.81,82.41][room],notes=player?.rest?[0,7,12,16,12,7]:[0,3,7,10,7,3];
+      const memoryShift={fire:2,mercy:5,defiance:1,obedience:0,sacrifice:-2,betrayal:-1,respect:7,abandon:-5,return:0}[save.active]||0;
+      const f=root*Math.pow(2,(notes[musicBeat%notes.length]+memoryShift)/12);musicNote(f,1.8,.032);musicNote(f*2,1.3,.012,.13);
+      if(musicBeat%4===0){musicNote(root/2,5,.045);musicNote(root*1.5,4.4,.018,.2);if(zoneId==='cistern'){tone(880,.18,'sine',.008);noiseSfx(.4,450,.015);}else if(room===1)tone(82,.35,'triangle',.007);else if(room===2)tone(1568,.12,'sine',.004);}musicBeat++;
+    }
+    if(state==='play'&&player.grounded&&Math.abs(player.vx)>60&&!player.rest&&stepClock<=0){stepClock=.24;tone(zoneId==='cistern'?370:room===2?170:115,.055,'triangle',.025);tone(1200,.025,'sine',.006);}
   }
   function toast(message) { $('toast').textContent = message; $('toast').classList.add('show'); toastTimer = 3.5; }
   function addLog(message, label = `LOOP ${String(save.loop).padStart(3, '0')}`) {
@@ -93,7 +129,7 @@
     $('memoryList').innerHTML = save.archive.length ? save.archive.map(m => `<button class="memory-row ${save.active === m.id ? 'active' : ''}" data-memory="${m.id}"><div class="name"><span>${memories[m.id].icon} ${memories[m.id].name}</span><span class="tag">${save.active === m.id ? 'ACTIVE' : 'EQUIP'}</span></div><div class="detail">${memories[m.id].desc}</div></button>`).join('') : '<div class="empty-memory"><span>◇</span><p>No memories recovered.<br>The first death will leave one behind.</p></div>';
     $('memoryList').querySelectorAll('[data-memory]').forEach(el => el.onclick = () => {
       if (state === 'title' || state === 'loadout' || (state === 'play' && nearRest())) {
-        save.active = save.active === el.dataset.memory ? null : el.dataset.memory; persist(); refreshUI();
+        save.active = save.active === el.dataset.memory ? null : el.dataset.memory; persist(); if(player.rest?.healed)writeCheckpoint(); refreshUI();
         if (state === 'loadout') showLoadout();
         toast(save.active ? `You remember: ${memories[save.active].name.toLowerCase()}.` : 'You enter without an active memory.');
       } else toast('Equip memories beside a signal anchor or between loops.');
@@ -106,9 +142,77 @@
     const first = $('overlayCard').querySelector('button'); if (first) first.focus({ preventScroll: true });
   }
   function closeModal() { $('overlay').classList.add('hidden'); keys.clear(); pressed.clear(); released.clear(); document.activeElement?.blur(); }
+  function checkpointValid(cp=save.checkpoint){
+    return !!(cp&&cp.version===1&&cp.loop===save.loop&&cp.archive===save.archive.map(m=>m.id).join('|')&&zones[cp.zone]&&zones[cp.zone].interactions.some(o=>o.kind==='bench'&&o.id===cp.bench)&&Array.isArray(cp.rooms)&&Array.isArray(cp.chosen)&&Array.isArray(cp.decisions)&&Array.isArray(cp.visited)&&cp.flags&&typeof cp.flags==='object');
+  }
+  function writeCheckpoint(bench=player.rest?.bench){
+    if(!bench||state!=='play')return false;
+    roomCache.set(zoneId,{enemies,boss,healUsed:player.healUsed});
+    save.checkpoint={version:1,loop:save.loop,archive:save.archive.map(m=>m.id).join('|'),zone:zoneId,bench:bench.id,flags:{...runFlags},decisions:[...decisions],chosen:[...chosen],visited:[...visited],childStage,childAttempts,runPower:player.runPower,resonance:player.resonance,rooms:JSON.parse(JSON.stringify([...roomCache]))};
+    return persist();
+  }
+  function resumeRun(){
+    if(!checkpointValid()){toast('No compatible bench save is available.');title();return false;}
+    const cp=save.checkpoint;player=newPlayer();runFlags={...cp.flags};decisions=cp.decisions.filter(id=>memories[id]);chosen=new Set(cp.chosen.filter(x=>typeof x==='string'));visited=new Set(cp.visited.filter(id=>zones[id]));roomCache=new Map();
+    for(const entry of cp.rooms.slice(0,12)){
+      if(!Array.isArray(entry)||!zones[entry[0]]||!entry[1]||!Array.isArray(entry[1].enemies))continue;
+      const value=entry[1],validEnemies=value.enemies.slice(0,32).filter(e=>e&&['sentinel','lancer','drone','echo'].includes(e.type)&&['x','y','hp','max','left','right','home','homeY','w','h','timer'].every(k=>Number.isFinite(e[k])));
+      const b=value.boss&&value.boss.type===zones[entry[0]].boss&&['hp','max','x','y','w','h','timer'].every(k=>Number.isFinite(value.boss[k]))?value.boss:null;
+      roomCache.set(entry[0],{enemies:validEnemies,boss:b,healUsed:!!value.healUsed});
+    }
+    childStage=clamp(Number(cp.childStage)||0,0,3);childAttempts=Math.max(0,Number(cp.childAttempts)||0);state='play';loadRoom(cp.zone);
+    const bench=world.interactions.find(o=>o.id===cp.bench);player.x=bench.x-11;player.y=bench.y+27-player.h;player.prevX=player.x;player.prevY=player.y;player.grounded=true;player.safe={x:player.x,y:player.y};player.runPower=clamp(Number(cp.runPower)||0,0,1);player.resonance=clamp(Number(cp.resonance)||1,0,3);player.rest={bench,time:1,healed:true};
+    camera=clamp(player.x-340,0,Math.max(0,world.width-W));cameraY=clamp(player.y-300,world.top,world.bottom-H);closeModal();refreshUI();addLog('You wake at the last signal anchor. This life is still yours.','CONTINUED');return true;
+  }
+  function mappedKey(key){
+    for(const action of Object.keys(controls))if((settings.bindings[action]||action)===key)return action;
+    return {arrowleft:'a',arrowright:'d',arrowup:'w',arrowdown:'s',x:'j',shift:'k',c:'l'}[key]||null;
+  }
+  function showSettings(from=state){
+    settingsReturn=from==='help'?pausedFrom:from;state='settings';bindingCapture=null;
+    modal(`<div class="eyebrow">MAKE THIS BODY YOURS</div><h2>Settings</h2><div class="settings-scroll"><div class="settings-sliders">${[['master','Master volume'],['music','Music'],['sfx','Effects'],['shake','Screen shake']].map(([k,label])=>`<label for="setting-${k}">${label}<input id="setting-${k}" type="range" min="0" max="1" step="0.05" value="${settings[k]}"></label>`).join('')}</div><button class="btn secondary" id="audioToggle">SOUND ${sound?'ON':'OFF'}</button><p class="small" id="bindingStatus">Select an action, then press a key. Escape cancels.</p><div class="binding-grid">${Object.entries(controls).filter(([k])=>k!=='escape').map(([k,label],i)=>`<button class="memory-choice" id="bind-${i}">${label}<b>${keyName(settings.bindings[k]||k).replaceAll('<','&lt;').replaceAll('>','&gt;')}</b></button>`).join('')}</div><p class="small">CONTROLLER: left stick / D-pad moves and aims. A jumps, X attacks, B dashes, Y interacts. LB deflects, RB imprints, LT uses memory, RT mends. View opens map; Menu pauses. In menus: D-pad selects, A confirms, B returns.</p></div><div class="buttons"><button class="btn secondary" id="resetSettings">RESET SETTINGS</button><button class="btn" id="settingsDone">DONE</button></div>`,{
+      settingsDone:closeSettings,audioToggle:()=>{sound=!sound;saveSettings();updateSoundButton();tone(660,.1);$('audioToggle').textContent=`SOUND ${sound?'ON':'OFF'}`;},
+      resetSettings:()=>{settings={...defaultSettings,bindings:{}};sound=false;saveSettings();updateSoundButton();showSettings(settingsReturn);}
+    });
+    for(const k of ['master','music','sfx','shake'])$(`setting-${k}`).oninput=e=>{settings[k]=clamp(Number(e.target.value),0,1);saveSettings();};
+    Object.keys(controls).filter(k=>k!=='escape').forEach((k,i)=>$(`bind-${i}`).onclick=()=>{bindingCapture=k;$('bindingStatus').textContent=`Press a key for ${controls[k]}.`;});
+  }
+  function closeSettings(){bindingCapture=null;saveSettings();if(settingsReturn==='title')title();else{state=settingsReturn;closeModal();}}
+  function updateSoundButton(){$('soundBtn').textContent=sound?'♪ ON':'♪ OFF';$('soundBtn').setAttribute('aria-pressed',String(sound));}
+  function showMemoryMenu(){
+    if(!nearRest()){toast('Return to a signal anchor to change memories.');return;}
+    state='archive';modal(`<div class="eyebrow">ACTIVE IDENTITY</div><h2>Who sits here?</h2>${save.archive.length?save.archive.map(m=>`<button class="memory-choice" id="rest-equip-${m.id}"><strong>${memories[m.id].name}${save.active===m.id?' / ACTIVE':''}</strong><span>${memories[m.id].desc}</span></button>`).join(''):'<p>Your first transfer will leave a memory.</p>'}<div class="buttons"><button class="btn" id="archiveDone">RETURN</button></div>`,{archiveDone:()=>{state='play';closeModal();}});
+    save.archive.forEach(m=>$(`rest-equip-${m.id}`).onclick=()=>{save.active=m.id;persist();state='play';closeModal();if(player.rest?.healed)writeCheckpoint();refreshUI();});
+  }
+  function pollGamepad(){
+    const pads=typeof navigator!=='undefined'&&navigator.getGamepads?Array.from(navigator.getGamepads()):[],pad=pads.find(p=>p&&p.connected!==false&&(p.mapping==='standard'||!p.mapping));
+    if(!pad){for(const key of padHeld)if(!keyboardHeld.has(key)){keys.delete(key);released.add(key);}padHeld.clear();padButtons.clear();padAxes.clear();return;}
+    const buttons=new Set(pad.buttons.map((b,i)=>b.pressed||b.value>.5?i:-1).filter(i=>i>=0));
+    const ax=pad.axes[0]||0,ay=pad.axes[1]||0,axes=new Set([...(ax<-.4?['left']:ax>.4?['right']:[]),...(ay<-.4?['up']:ay>.4?['down']:[])]);
+    const edge=i=>buttons.has(i)&&!padButtons.has(i),axisEdge=k=>axes.has(k)&&!padAxes.has(k);
+    if(state==='play'){
+      const next=new Set();for(const [i,k] of [[0,' '],[1,'k'],[2,'j'],[3,'e'],[4,'f'],[5,'q'],[6,'l'],[7,'h'],[8,'m'],[9,'escape'],[12,'w'],[13,'s'],[14,'a'],[15,'d']])if(buttons.has(i))next.add(k);
+      if(ax<-.3)next.add('a');if(ax>.3)next.add('d');if(ay<-.4)next.add('w');if(ay>.4)next.add('s');
+      for(const k of padHeld)if(!next.has(k)&&!keyboardHeld.has(k)){keys.delete(k);released.add(k);if(k===' '&&player.vy < -220)player.vy=-220;}
+      for(const k of next){if(!padHeld.has(k)&&!keyboardHeld.has(k))pressed.add(k);keys.add(k);}padHeld=next;
+    }else{
+      for(const k of padHeld)if(!keyboardHeld.has(k))keys.delete(k);padHeld.clear();
+      const items=Array.from($('overlayCard').querySelectorAll('button:not([disabled]), input'));
+      let index=Math.max(0,items.indexOf(document.activeElement));
+      if(edge(12)||axisEdge('up'))index=(index-1+items.length)%items.length;
+      if(edge(13)||axisEdge('down'))index=(index+1)%items.length;
+      const item=items[index];if(item){if(edge(12)||edge(13)||axisEdge('up')||axisEdge('down'))item.focus();
+        if(item.type==='range'&&(edge(14)||edge(15)||axisEdge('left')||axisEdge('right'))){item.value=clamp(Number(item.value)+(edge(15)||axisEdge('right')?.05:-.05),0,1);item.oninput?.({target:item});}
+        if(edge(0)&&item.tagName==='BUTTON')item.click();}
+      if(edge(1)||edge(9)){
+        if(state==='settings')closeSettings();else if(['map','help','archive'].includes(state)){if(state==='help'&&pausedFrom==='title')title();else{state='play';closeModal();}}
+      }
+    }
+    padButtons=buttons;padAxes=axes;
+  }
   function title() {
     state = 'title';
-    modal(`<div class="eyebrow">ONE CONSCIOUSNESS. COUNTLESS LIVES.</div><h2>ECHO<span class="rose">//</span>FALL</h2><p>The world remembers what you did.<br><span class="accent">It doesn't remember why.</span></p><p class="small">A playable chapter about the selves we leave behind.<br>Explore. Make a choice. Fall. Bring one memory back.</p><div class="buttons"><button class="btn" id="beginBtn">${save.loop > 1 ? 'RETURN TO THE WAKE' : 'ENTER THE FIRST LOOP'} →</button><button class="btn secondary" id="controlsBtn">CONTROLS</button></div><p class="small" style="margin-top:18px">KEYBOARD RECOMMENDED · PROGRESS SAVES AUTOMATICALLY</p>`, { beginBtn: showLoadout, controlsBtn: () => showHelp('title') });
+    modal(`<div class="eyebrow">ONE CONSCIOUSNESS. COUNTLESS LIVES.</div><h2>ECHO<span class="rose">//</span>FALL</h2><p>The world remembers what you did.<br><span class="accent">It doesn't remember why.</span></p><p class="small">A playable chapter about the selves we leave behind.<br>Explore. Make a choice. Fall. Bring one memory back.</p><div class="buttons">${checkpointValid()?'<button class="btn" id="continueBtn">CONTINUE FROM BENCH</button>':''}<button class="btn secondary" id="beginBtn">${checkpointValid() ? 'START A NEW RUN' : save.loop > 1 ? 'RETURN TO THE WAKE' : 'ENTER THE FIRST LOOP'} →</button><button class="btn secondary" id="controlsBtn">CONTROLS</button></div><p class="small" style="margin-top:18px">KEYBOARD / CONTROLLER · REST AT BENCHES TO SAVE</p>`, { continueBtn: resumeRun, beginBtn: () => checkpointValid() ? choice('Leave this life behind?', 'Starting a new run replaces your bench checkpoint. Your archived memories remain.', [{text:'START A NEW RUN',action:showLoadout},{text:'BACK',action:title}], 'BENCH SAVE') : showLoadout(), controlsBtn: () => showHelp('title') });
   }
   function showLoadout() {
     state = 'loadout';
@@ -117,11 +221,14 @@
     save.archive.forEach(m => $(`equip-${m.id}`).onclick = () => { save.active = save.active === m.id ? null : m.id; persist(); refreshUI(); showLoadout(); });
   }
   function showHelp(from = state) {
-    pausedFrom = from; state = 'help';
-    modal('<div class="eyebrow">MOVEMENT / RHYTHM / CONSEQUENCE</div><h2>Learn the rhythm.</h2><div class="controls-grid"><span>Move / aim blade</span><b>A D / W S or arrows</b><span>Jump / wall jump</span><b>SPACE (hold for height)</b><span>Three-hit chain / charge</span><b>J / X · tap / hold</b><span>Rising cut / pogo</span><b>W + J / airborne S + J</b><span>Dash / air dash</span><b>K / SHIFT</b><span>Deflect / charged counter</span><b>F · tap / hold, release</b><span>Imprint / detonate</span><b>Q · press twice</b><span>Mend / active memory</span><b>Hold H / L or C</b><span>Interact / map / pause</span><b>E / M / ESC</b><span>Yield this body</span><b>R (confirm)</b></div><p class="small">White attacks: tap F at impact. Red attacks: evade or release F after charging.<br>Deflects earn Resonance. Q imprints a nearby foe; Q again detonates stored strain. Hold H to spend one Resonance healing.<br>Pogos, wall jumps, and aerial deflects restore your air dash. DEFIANCE adds double jump.<br>Late blocks fracture integrity; the next hit cashes out that damage.</p><div class="buttons"><button class="btn" id="resumeBtn">CONTINUE →</button></div>', { resumeBtn: () => { if (pausedFrom === 'title') title(); else { state = pausedFrom; closeModal(); } } });
+    pausedFrom=from;state='help';
+    modal(`<div class="eyebrow">MOVEMENT / RHYTHM / CONSEQUENCE</div><h2>Learn the rhythm.</h2><div class="controls-grid">${Object.entries(controls).map(([k,label])=>`<span>${label}</span><b>${keyName(settings.bindings[k]||k)}</b>`).join('')}</div><p class="small">Hold jump for height. Aim down and attack in the air to pogo.<br>White attacks: tap Deflect at impact. Red attacks: evade or release a charged Deflect.<br>Imprint spends Resonance; press again to detonate. Hold Mend to heal.<br>Controller: A jump / X attack / B dash / Y interact / LB deflect / RB imprint.<br>Rest at a bench to save this life. Death carries one decision into the next.</p><div class="buttons"><button class="btn" id="resumeBtn">CONTINUE</button><button class="btn secondary" id="openSettings">SETTINGS</button>${from==='play'?'<button class="btn secondary" id="benchMemories">MEMORIES</button><button class="btn secondary" id="backTitle">TITLE / LAST BENCH</button>':''}</div>`,{
+      resumeBtn:()=>{if(pausedFrom==='title')title();else{state=pausedFrom;closeModal();}},openSettings:()=>showSettings('help'),benchMemories:showMemoryMenu,backTitle:title
+    });
   }
   function newPlayer() { return { x: 110, y: FLOOR - 40, w: 22, h: 40, vx: 0, vy: 0, dir: 1, hp: 6, grounded: false, inv: 0, attackCd: 0, dashCd: 0, dash: 0, dashGrace: 0, abilityCd: 0, ward: 0, parry: 0, double: false, healUsed: false, anim: 0, runPower: 0, resonance: 0, fracture: 0, perfect: 0, counter: 0, parryCd: 0, guardCharge: 0, attackHold: 0, attackBuffer: 0, combo: 0, comboTime: 0, attackAxis: 'side', wall: 0, wallTime: 0, wallLock: 0, airDashUsed: false, drop: 0, focus: 0, safe: { x: 110, y: 412 } }; }
   function startRun() {
+    save.checkpoint=null;persist();
     decisions = []; chosen = new Set(); roomCache = new Map(); visited = new Set(); runFlags = {}; imprint = null; hitstop = 0; player = newPlayer(); room = 0; deathReason = ''; childStage = 0; childAttempts = 0;
     loadRoom(0); state = 'play'; closeModal();
     addLog(save.loop === 1 ? 'A body opens its eyes. Somewhere, a machine exhales.' : `Another body. The same unfinished thought. ${save.archive.length} memories survived.`);
@@ -145,10 +252,10 @@
       const hp = z.boss === 'king' ? (remembered('obedience') ? 48 : 40) : (did('sacrifice') ? 38 : 48);
       boss = {type:z.boss,x:world.arena[1]-220,y:FLOOR-(z.boss==='king'?92:110),w:z.boss==='king'?54:64,h:z.boss==='king'?92:105,hp,max:hp,phase:'idle',timer:1.2,face:-1,hit:0,exposed:0,attack:0,strain:0,heavy:false};
     }
-    shots = []; particles = []; slash = []; ghosts = []; imprint = null; hitstop = 0;
+    shots = []; particles = []; slash = []; ghosts = []; remnants=[]; imprint = null; hitstop = 0;
     const spawn = z.spawns[entry] || z.spawns.default;
     Object.assign(player, {x:spawn[0],y:spawn[1],vx:0,vy:0,grounded:false,wall:0,wallTime:0,wallLock:0,dash:0,inv:.4,airDashUsed:false,double:false,attackHold:0,guardCharge:0,focus:0,parry:0,perfect:0,counter:0,drop:0});
-    Object.assign(player,{prevX:player.x,prevY:player.y,attackVisual:0,attackBuffer:0,dashBuffer:0,deflectBuffer:0,landing:0,wallSteer:0});
+    Object.assign(player,{prevX:player.x,prevY:player.y,attackVisual:0,attackBuffer:0,dashBuffer:0,deflectBuffer:0,landing:0,wallSteer:0,rest:null,standUp:0});
     player.healUsed = !!cached?.healUsed;
     player.safe = {x:spawn[0],y:spawn[1]}; jumpBuffer = 0; coyote = 0;
     camera = clamp(player.x - 340, 0, Math.max(0,world.width-W)); cameraY = clamp(player.y-300,world.top,world.bottom-H);
@@ -156,6 +263,14 @@
     if (id === 'cistern' && remembered('obedience')) world.platforms.push({x:310,y:430,w:830,h:20});
     if (id === 'archive' && remembered('defiance')) world.platforms.push({x:620,y:225,w:90,h:18});
     if (id === 'wake') world.interactions = world.interactions.filter(o => o.id !== 'wake-return' || runFlags['well-link']);
+    if(id==='wake'){
+      if(save.loop>1)enemies=enemies.filter(e=>!e.training);
+      if(remembered('mercy'))world.interactions.push({id:'mercy-return',kind:'returned',x:205,y:422,label:'A LIFE THAT REMEMBERS'});
+      if(remembered('fire'))world.interactions.push({id:'ember-scar',kind:'scar',x:900,y:422,label:'WHERE THE WARMTH WAS'});
+    }
+    if(id==='archive'&&remembered('betrayal')&&!cached&&!runFlags['betrayal-guard']){
+      const guard=enemy(960,'echo',{left:880,right:1060});guard.guardId='betrayal-guard';guard.memory='betrayal';guard.hp=guard.max=12;enemies.push(guard);
+    }
     for (let i = 0; i < save.bodies.length; i++) {
       const b = save.bodies[i];
       if ((b.zone === id || (!b.zone && id === ['wake','cradle','garden','choir'][b.room])) && !world.interactions.some(o => Math.abs(o.x - b.x) < 100)) world.interactions.push({id:`body-${i}`,x:clamp(b.x,90,world.width-90),y:Number.isFinite(b.y)?Math.min(b.y+30,417):412,label:'A BODY YOU LEFT BEHIND',kind:'body',loop:b.loop});
@@ -166,13 +281,13 @@
   }
   function enemy(x, type = 'sentinel', config = {}) {
     const hp=type==='lancer'?10:type==='drone'?5:type==='echo'?6:7;
-    return {x,y:(config.floor??FLOOR)-38,w:26,h:38,home:x,homeY:(config.floor??FLOOR)-38,left:config.left??x-100,right:config.right??x+100,hp,max:hp,type,vx:0,dir:-1,timer:.8,phase:'walk',hit:0,stagger:0,strain:0,heavy:false,combo:0};
+    return {x,y:(config.floor??FLOOR)-38,w:26,h:38,home:x,homeY:(config.floor??FLOOR)-38,left:config.left??x-100,right:config.right??x+100,hp,max:hp,type,vx:0,dir:-1,timer:.8,phase:'walk',hit:0,stagger:0,strain:0,heavy:false,combo:0,training:!!config.training};
   }
   function enterZone(id, entry) {
     roomCache.set(zoneId,{enemies,boss,healUsed:player.healUsed});
     loadRoom(id,entry); keys.clear(); pressed.clear(); released.clear(); toast(world.name);
   }
-  function doorOpen(o) { return (!o.requires || !!runFlags[o.requires]) && (!o.memory || remembered(o.memory)); }
+  function doorOpen(o) { return (!o.requires || !!runFlags[o.requires]) && (!o.memory || remembered(o.memory)) && (!o.blockedBy||!remembered(o.blockedBy)) && (!o.guard||!remembered('betrayal')||!!runFlags[o.guard]); }
   function nearRest() { return world?.interactions.some(o=>o.kind==='bench'&&Math.abs(player.x-o.x)<100&&Math.abs(player.y-o.y)<90) || (zoneId==='wake'&&player.x<220); }
   function showMap() {
     state='map';
@@ -200,7 +315,21 @@
   }
   function interact(o) {
     if (!o) return;
-    if (o.kind === 'bench') { player.hp=6;player.fracture=0;player.resonance=Math.max(1,player.resonance);player.safe={x:player.x,y:player.y};player.abilityCd=0;refreshUI();toast('Signal restored. Equip memories in the archive. M opens your map.');burst(o.x,o.y,C.cyan,20);return; }
+    if(o.kind==='relic'){chosen.add(o.id);player.resonance=3;player.hp=Math.min(6,player.hp+1);refreshUI();addLog(o.story,'A HIDDEN RECORD');toast('Hidden record recovered. Resonance restored.');burst(o.x,o.y,C.gold,24);return;}
+    if(o.kind==='mirror'){
+      choice('One decision can cross.',decisions.length?'The glass holds the version of you who made that choice. Transfer now to discover what the world remembers, or keep exploring.':'Make a choice at the wounded creature, then return here. You can also continue through the east gate.',[
+        ...(decisions.length?[{text:'CARRY ONE MEMORY',action:()=>die('You stepped through the transfer glass.')}]:[]),{text:'KEEP EXPLORING',action:()=>{}}
+      ],'THE FIRST RETURN');return;
+    }
+    if(o.kind==='returned'){chosen.add(o.id);player.hp=Math.min(6,player.hp+1);refreshUI();addLog('The creature presses its head into your palm. A thin root opens beneath the old waterworks. It remembers the hand that spared it.','MERCY / A CONSEQUENCE');toast('A life you saved has returned. Look for its roots in the Cistern.');return;}
+    if(o.kind==='scar'){chosen.add(o.id);addLog('The stones still hold its outline. You remember taking warmth. The garden remembers losing a life.','EMBER / A CONSEQUENCE');toast('The ember strengthens you. The roots no longer welcome you.');return;}
+    if (o.kind === 'bench') {
+      if(player.rest){player.standUp=.22*clamp(player.rest.time/.45,0,1);player.rest=null;return;}
+      if(!player.grounded||Math.abs(player.x+11-o.x)>70){toast('Stand beside the anchor to rest.');return;}
+      player.rest={bench:o,time:0,healed:false};player.standUp=0;player.vx=0;player.dash=0;player.attackVisual=0;player.attackCd=0;
+      player.attackHold=0;player.guardCharge=0;player.parry=0;player.perfect=0;player.counter=0;player.attackBuffer=0;player.dashBuffer=0;player.deflectBuffer=0;
+      toast('Resting at the signal anchor. E to stand, or move to leave.');return;
+    }
     if (o.kind === 'lever') { runFlags[o.flag]=true;chosen.add(o.id);toast('A shortcut opens. Its two ends are connected.');addLog(o.label,'A PATH RECONNECTED');tone(470,.3);return; }
     if (o.kind === 'cache') { chosen.add(o.id);player.resonance=3;player.hp=Math.min(6,player.hp+1);refreshUI();burst(o.x,o.y,C.gold,30);toast('Resonance filled. One integrity restored.');return; }
     if (o.kind === 'creature') {
@@ -232,7 +361,12 @@
     else if (o.kind === 'choir') choirDialogue();
     else if (o.kind === 'gate') {
       if (bossStarted && !bossDefeated) { toast('The sovereign seals the room.');return; }
-      if (!doorOpen(o)) { toast(o.memory?'Remember DEFIANCE to give this passage a shape.':o.requires==='child'?'The child has not chosen to let you pass.':['king','mother'].includes(o.requires)?'The sovereign still holds this threshold.':'Open this shortcut from its far side.');return; }
+      if(o.guard&&remembered('betrayal')&&!runFlags[o.guard]){
+        if(remembered('respect'))choice('You finally asked.','The self at the lift remembers your betrayal. It also remembers the time you listened.',[{text:'ASK TO PASS',action:()=>{runFlags[o.guard]=true;for(const e of enemies)if(e.guardId===o.guard)e.hp=0;addLog('The old self steps aside. Permission is not forgiveness.','KINSHIP');}},{text:'LEAVE',action:()=>{}}]);
+        else toast('An old self guards this lift. Defeat it, or return remembering KINSHIP.');return;
+      }
+      if(o.blockedBy&&remembered(o.blockedBy)){toast(`${memories[o.blockedBy].short} closes this passage. Forget it between loops to reopen the route.`);return;}
+      if (!doorOpen(o)) { toast(o.memory?`Remember ${memories[o.memory].short} to give this passage a shape.`:o.requires==='child'?'The child has not chosen to let you pass.':['king','mother'].includes(o.requires)?'The sovereign still holds this threshold.':'Open this shortcut from its far side.');return; }
       enterZone(o.target,o.entry);
     }
   }
@@ -260,6 +394,7 @@
     ], shared ? 'A FOURTH VOICE ENTERS THE CHOIR' : 'THE ORIGINAL MEMORY');
   }
   function ending(id) {
+    save.checkpoint=null;
     state = 'ending'; if (!save.endings.includes(id)) save.endings.push(id); persist();
     const endings = {
       RESET: ['The kindest prison.', 'The world wakes without its fear. The child returns to his garden. You close your eyes and choose, once more, to forget.'],
@@ -272,6 +407,7 @@
   }
   function die(reason, completed = false) {
     if (state === 'dead') return;
+    save.checkpoint=null;persist();
     state = 'dead'; deathReason = reason; deathsThisSession++; tone(90, .6, 'triangle'); shake = 12;
     if (!completed) { save.bodies.push({ x: player.x, y:player.y, zone:zoneId, room, loop: save.loop }); save.bodies = save.bodies.slice(-7); }
     const candidates = decisions.length ? [...decisions] : ['return'];
@@ -312,9 +448,11 @@
   }
   function hurt(amount=1,sourceX=player.x,reason='The signal could not hold.',options={}) {
     if(state!=='play'||player.inv>0||player.ward>0||(!options.heavy&&player.dash>0))return 'immune';
+    player.rest=null;player.standUp=0;
     const facing=!player.grounded||player.dir===(Math.sign(sourceX-player.x)||player.dir);
     if(!options.hazard&&facing&&(options.heavy?player.counter>0:player.perfect>0||player.counter>0)) {
       const charged=player.counter>0;
+      if(options.source?.training){runFlags.learnDeflect=true;options.source.hp=0;}
       gainResonance(charged?1.5:1);player.fracture=0;player.inv=.10;player.parry=0;player.perfect=0;player.counter=0;player.parryCd=.055;
       player.airDashUsed=false;player.double=false;
       if(!player.grounded)player.vy=Math.min(player.vy,-210);
@@ -327,6 +465,7 @@
       player.fracture=Math.min(player.hp-1,player.fracture+.5);player.inv=.2;player.parry=0;player.focus=0;
       tone(250,.08);refreshUI();toast('LATE BLOCK · Integrity fractured');return 'guard';
     }
+    if(options.source?.training){amount=Math.min(amount,Math.max(0,player.hp-1));player.fracture=0;}
     player.hp-=amount+Math.ceil(player.fracture);player.fracture=0;player.inv=1;player.focus=0;player.attackHold=0;player.guardCharge=0;player.dash=0;
     player.vx=player.x<sourceX?-270:270;player.vy=-170;player.wallLock=.12;
     shake=8;hitstop=.06;burst(player.x+10,player.y+20,C.rose,14);tone(120,.12,'sawtooth');refreshUI();
@@ -334,9 +473,13 @@
   }
   function hitEnemy(e,damage,knock=player.dir,stagger=.12) {
     if(e.hp<=0)return false;
-    e.hp-=damage;e.hit=.16;e.x=clamp(e.x+knock*10,e.left-25,e.right+25);e.stagger=Math.max(e.stagger,stagger);
+    if(e.type==='echo'&&e.memory==='return'&&e.phase==='walk'&&stagger<.5&&(e.skillCd||0)<=0){e.skillCd=2;e.blockFlash=.25;burst(e.x+13,e.y+15,C.cyan,10);return false;}
+    if(e.memory==='obedience'&&(e.skillCd||0)<=0){damage*=.35;e.skillCd=2.5;e.blockFlash=.3;}
+    const protector=enemies.find(other=>other!==e&&other.hp>0&&other.guarding&&Math.abs(other.x-e.x)<100&&Math.abs(other.y-e.y)<45);
+    if(protector&&stagger<.5){damage*=.3;protector.blockFlash=.22;burst(protector.x+13,protector.y+15,C.gold,5);}
+    e.hp=e.training?Math.max(1,e.hp-damage):e.hp-damage;e.hit=.16;e.x=clamp(e.x+knock*10,e.left-25,e.right+25);e.stagger=Math.max(e.stagger,stagger);
     burst(e.x+13,e.y+14,e.type==='echo'?'#bfa1ff':C.rose,8);tone(230,.045,'square',.02);hitstop=Math.max(hitstop,.025);
-    if(e.hp<=0){burst(e.x+13,e.y+16,C.cyan,18);if(active('betrayal')){player.hp=Math.min(6,player.hp+1);refreshUI();}}
+    if(e.hp<=0){if(e.guardId)runFlags[e.guardId]=true;remnants.push({...e,hp:e.max,strain:0,phase:'recover',life:.65,prevX:e.x,prevY:e.y});burst(e.x+13,e.y+16,C.cyan,18);if(active('betrayal')){player.hp=Math.min(6,player.hp+1);refreshUI();}}
     return true;
   }
   function damageBoss(amount,bypass=false) {
@@ -345,6 +488,10 @@
       burst(boss.x+boss.w/2,boss.y+30,C.gold,7);tone(1100,.04,'triangle');return false;
     }
     boss.hp-=amount;boss.hit=.12;shake=3;hitstop=Math.max(hitstop,.03);burst(boss.x+boss.w/2,boss.y+38,C.cyan,12);tone(170,.06,'square');
+    if(boss.type==='king'){
+      const style=!player.grounded?'air':player.dashGrace>0?'dash':bypass?'charge':'ground';
+      if(style!==boss.lastStyle&&style!=='ground')boss.breaks=(boss.breaks||0)+1;boss.lastStyle=style;
+    }
     if(boss.hp<=0){
       boss.hp=0;bossDefeated=true;runFlags[boss.type]=true;shots=[];enemies=enemies.filter(e=>e.type!=='echo');imprint=null;
       burst(boss.x+30,boss.y+40,C.gold,60,2);shake=13;player.hp=Math.min(6,player.hp+2);refreshUI();
@@ -448,7 +595,9 @@
   function update(dt) {
     if(player){player.prevX=player.x;player.prevY=player.y;}
     for(const e of enemies){e.prevX=e.x;e.prevY=e.y;}
-    clock+=dt;toastTimer-=dt;if(toastTimer<=0)$('toast').classList.remove('show');shake=Math.max(0,shake-dt*25);
+    clock+=dt;updateSound(dt);toastTimer-=dt;if(toastTimer<=0)$('toast').classList.remove('show');shake=Math.max(0,shake-dt*25);
+    if(state==='settings'&&pressed.has('escape')){closeSettings();return;}
+    if(state==='archive'&&pressed.has('escape')){state='play';closeModal();return;}
     if(state==='map'&&(pressed.has('m')||pressed.has('escape'))){state='play';closeModal();return;}
     if(state==='help'&&pressed.has('escape')){state=pausedFrom;if(state==='title')title();else closeModal();return;}
     if(state!=='play'){pressed.clear();released.clear();return;}
@@ -456,12 +605,19 @@
     if(pressed.has('m')){showMap();return;}
     if(hitstop>0){hitstop=Math.max(0,hitstop-dt);return;}
     roomTime+=dt;
-    for(const k of ['inv','attackCd','attackVisual','landing','dashCd','dash','dashGrace','abilityCd','ward','parry','perfect','counter','parryCd','comboTime','wallTime','wallLock','wallSteer','drop','mendCd'])player[k]=Math.max(0,(player[k]||0)-dt);
+    if(zoneId==='wake'){if(player.x>220)runFlags.learnMove=true;if(player.y<365)runFlags.learnJump=true;if(player.rest?.healed)runFlags.learnRest=true;}
+    for(const k of ['inv','attackCd','attackVisual','landing','standUp','dashCd','dash','dashGrace','abilityCd','ward','parry','perfect','counter','parryCd','comboTime','wallTime','wallLock','wallSteer','drop','mendCd'])player[k]=Math.max(0,(player[k]||0)-dt);
     player.attackBuffer=Math.max(0,player.attackBuffer-dt);
     if(pressed.has('r')){choice('Leave this body?','The run ends here. You will carry one decision into the next loop.<br>The body stays behind.',[{text:'TRANSFER',style:'danger',action:()=>die('You chose to leave.')},{text:'STAY',action:()=>{}}],'A VOLUNTARY END');return;}
     if(pressed.has('e')){const o=nearestInteraction(),previous=zoneId;if(o)interact(o);if(state!=='play'||zoneId!==previous)return;}
     const move=Number(keys.has('d')||keys.has('arrowright'))-Number(keys.has('a')||keys.has('arrowleft'));
     const down=keys.has('s')||keys.has('arrowdown');
+    const leavingRest=move||[' ','j','x','k','shift','f','q','l','c','h'].some(k=>keys.has(k));
+    if(leavingRest){player.rest=null;player.standUp=0;}
+    if(player.rest){
+      const rest=player.rest;rest.time+=dt;movePlayerX(approach(player.x,rest.bench.x-11,dt*180)-player.x);
+      if(rest.time>=.45&&!rest.healed){rest.healed=true;player.hp=6;player.fracture=0;player.resonance=Math.max(1,player.resonance);player.safe={x:player.x,y:player.y};player.abilityCd=0;refreshUI();burst(rest.bench.x,rest.bench.y,C.cyan,20);tone(530,.25);const saved=writeCheckpoint(rest.bench);toast(saved?'Signal restored / game saved. E to stand.':'Signal restored. Browser storage is unavailable; this life could not be saved.');}
+    }
     if(move&&player.wallLock<=0)player.dir=move;
     player.deflectBuffer=Math.max(0,(player.deflectBuffer||0)-dt);
     if(pressed.has('f'))player.deflectBuffer=.12;
@@ -486,6 +642,7 @@
     if(pressed.has('k')||pressed.has('shift'))player.dashBuffer=.12;
     if(player.dashBuffer>0&&player.dashCd<=0&&(player.grounded||!player.airDashUsed)){
       player.dashBuffer=0;
+      noiseSfx(.16,2200,.035);
       player.airDashUsed=!player.grounded;player.dash=.15;player.dashCd=active('abandon')?.32:.58;player.dashGrace=.50;player.vy=0;player.attackHold=0;player.guardCharge=0;player.attackCd=Math.min(player.attackCd,.06);player.focus=0;tone(180,.12,'sawtooth',.015);
     }
     if(player.dash>0){player.vx=player.dir*720;player.vy=0;particles.push({x:player.x+11,y:player.y+20,vx:0,vy:0,life:.25,max:.25,color:C.cyan,size:6});}
@@ -525,6 +682,7 @@
     particles=particles.filter(p=>p.life>0);slash.forEach(s=>s.life-=dt);slash=slash.filter(s=>s.life>0);
     if(particles.length>260)particles.splice(0,particles.length-260);
     ghostTimer-=dt;ghosts.forEach(g=>g.life-=dt);ghosts=ghosts.filter(g=>g.life>0);
+    remnants.forEach(e=>e.life-=dt);remnants=remnants.filter(e=>e.life>0);
     if(player.dash>0&&ghostTimer<=0){ghostTimer=.025;ghosts.push({x:player.x,y:player.y,dir:player.dir,life:.18});}
     camera+=(clamp(player.x-340+player.vx*.13,0,Math.max(0,world.width-W))-camera)*(1-Math.exp(-dt*7));
     cameraY+=(clamp(player.y-285,world.top,world.bottom-H)-cameraY)*(1-Math.exp(-dt*7));
@@ -532,55 +690,76 @@
   }
   function updateEnemies(dt) {
     for(const e of enemies){
-      if(e.hp<=0)continue;e.hit=Math.max(0,e.hit-dt);e.stagger=Math.max(0,e.stagger-dt);
+      if(e.hp<=0)continue;e.hit=Math.max(0,e.hit-dt);e.stagger=Math.max(0,e.stagger-dt);e.blockFlash=Math.max(0,(e.blockFlash||0)-dt);e.skillCd=Math.max(0,(e.skillCd||0)-dt);e.guarding=false;
       if(e.stagger>0)continue;e.timer-=dt;
       const dx=player.x-e.x,dy=player.y-e.y,close=Math.abs(dx)<400&&Math.abs(dy)<140;
+      if(e.type==='echo'&&!e.recognized&&close){e.recognized=true;e.phase='recognize';e.timer=1.3;e.speech=remembered('betrayal')?'I remember your blade.':remembered('respect')?'You listened. Why are we fighting?':'You were not supposed to come back.';}
+      if(e.phase==='recognize'){if(e.timer<=0){e.phase='walk';e.speech='';e.timer=.4;}continue;}
+      if(e.type==='echo'&&e.memory&&close&&e.skillCd<=0){
+        if(e.memory==='respect'){gainResonance(1);e.hp=0;burst(e.x+13,e.y+20,C.cyan,20);addLog('The summoned self lowers its blade. "You asked once. I choose again."','KINSHIP');continue;}
+        if(e.memory==='fire'){const d=Math.hypot(dx,dy)||1;shots.push({x:e.x+13,y:e.y+18,vx:dx/d*220,vy:dy/d*220,r:7,life:3,friendly:false,color:'#ffa16b',source:e});e.skillCd=1.8;}
+        if(e.memory==='mercy'||e.memory==='sacrifice'){if(boss&&!bossDefeated)boss.hp=Math.min(boss.max,boss.hp+1.5);burst(e.x+13,e.y+18,C.rose,10);e.skillCd=4;}
+        if(e.memory==='defiance'&&Math.abs(dx)>90){e.x=clamp(e.x+Math.sign(dx)*85,e.left,e.right);burst(e.x,e.y,'#c7a5ff',12);e.skillCd=2.5;}
+      }
+      if(e.type==='sentinel'&&!e.training&&e.phase==='walk'&&close){
+        const ally=enemies.find(a=>a!==e&&a.hp>0&&!a.training&&Math.abs(a.x-e.x)<130&&Math.abs(a.y-e.y)<45);
+        if(ally){e.guarding=true;e.dir=Math.sign(dx)||e.dir;const target=clamp(ally.x+e.dir*38,e.left,e.right);e.x=approach(e.x,target,dt*85);if(Math.abs(dx)>64)continue;}
+      }
       if(e.type==='drone'){
         e.y=e.homeY+Math.sin(roomTime*2+e.home)*18;e.x=clamp(e.x+e.dir*30*dt,e.left,e.right);if(e.x<=e.left||e.x>=e.right)e.dir*=-1;
         if(e.phase==='windup'&&e.timer<=0){const d=Math.hypot(dx,dy)||1;shots.push({x:e.x+13,y:e.y+18,vx:dx/d*235,vy:dy/d*235,r:7,life:4,friendly:false,color:C.cyan,source:e});e.phase='walk';e.timer=2.5;}
-        else if(e.phase==='walk'&&e.timer<=0&&close){e.phase='windup';e.timer=.7;}
+        else if(e.phase==='walk'&&e.timer<=0&&close){e.phase='windup';e.timer=.7;tone(740,.2,'sine',.012);}
         continue;
       }
       if(e.phase==='walk'){
         if(close)e.dir=Math.sign(dx)||e.dir;
-        if(Math.abs(dx)<(e.type==='lancer'?150:75)&&Math.abs(dy)<75&&e.timer<=0){e.phase='windup';e.timer=e.type==='lancer'?.78:.46;e.heavy=e.type==='lancer';e.combo=0;}
+        if(Math.abs(dx)<(e.type==='lancer'?150:75)&&Math.abs(dy)<75&&e.timer<=0){e.phase='windup';e.timer=e.training?.9:e.type==='lancer'?.78:.46;e.heavy=e.type==='lancer';e.combo=0;tone(e.heavy?190:620,.16,'triangle',.018);}
         else{e.x+=e.dir*(e.type==='echo'?95:55)*dt;if(e.x<=e.left||e.x>=e.right)e.dir*=-1;}
-      }else if(e.phase==='windup'&&e.timer<=0){e.phase='strike';e.timer=e.type==='lancer'?.26:.17;e.vx=e.dir*(e.type==='lancer'?430:240);}
+      }else if(e.phase==='windup'&&e.timer<=0){e.phase='strike';e.connected=false;e.timer=e.type==='lancer'?.26:.17;e.vx=e.dir*(e.type==='lancer'?430:e.memory==='abandon'?420:240);}
       else if(e.phase==='strike'){
         e.x+=e.vx*dt;
-        if(overlap({x:e.x-12,y:e.y+4,w:e.w+24,h:e.h-4},player))hurt(1,e.x,'A sentinel interrupted the signal.',{source:e,heavy:e.heavy});
-        if(e.timer<=0){if(e.type==='sentinel'&&e.combo===0){e.combo++;e.phase='windup';e.timer=.32;e.dir=Math.sign(player.x-e.x)||e.dir;}else{e.phase='recover';e.timer=e.type==='lancer'?1.05:.7;}}
+        if(overlap({x:e.x-12,y:e.y+4,w:e.w+24,h:e.h-4},player)){const result=hurt(1,e.x,'A sentinel interrupted the signal.',{source:e,heavy:e.heavy});if(result!=='immune')e.connected=true;if(result==='hit'&&e.memory==='betrayal')e.hp=Math.min(e.max,e.hp+2);}
+        if(e.timer<=0){if(e.type==='sentinel'&&!e.training&&e.combo===0){e.combo++;e.phase='windup';e.timer=.32;e.dir=Math.sign(player.x-e.x)||e.dir;}else{e.phase='recover';e.timer=e.type==='lancer'?(e.connected?.8:1.5):.7;e.missed=e.type==='lancer'&&!e.connected;}}
       }else if(e.phase==='recover'&&e.timer<=0){e.phase='walk';e.timer=.2;}
       e.x=clamp(e.x,e.left,e.right);
     }enemies=enemies.filter(e=>e.hp>0);
   }
   function updateBoss(dt) {
     if(!boss||!bossStarted||bossDefeated)return;
+    boss.stage||=1;
+    if(boss.stage===1&&(boss.hp<=boss.max*.5||(boss.type==='king'&&(boss.breaks||0)>=3))){
+      boss.stage=2;boss.phase='transition';boss.timer=1.4;boss.exposed=1.4;shots=[];shake=7;
+      toast(boss.type==='king'?'THE KING / PREDICTION BROKEN. A new rhythm begins.':'THE MOTHER / RECALL. Your archived selves answer.');burst(boss.x+30,boss.y+30,boss.type==='king'?C.gold:C.rose,35);
+    }
     boss.timer-=dt;boss.hit=Math.max(0,boss.hit-dt);boss.exposed=Math.max(0,boss.exposed-dt);
+    if(boss.phase==='transition'){if(boss.timer<=0){boss.phase='idle';boss.timer=.6;}return;}
     const [left,right]=world.arena;
     if(boss.type==='king'){
-      if(boss.phase==='idle'&&boss.timer<=0){boss.attack++;boss.pattern=boss.attack%3;boss.phase='tell';boss.timer=boss.pattern===0?.85:.65;boss.heavy=boss.pattern===0;boss.face=Math.sign(player.x-boss.x)||-1;boss.chain=0;}
+      if(boss.phase==='idle'&&boss.timer<=0){boss.attack++;boss.pattern=boss.stage===2?[2,0,1][boss.attack%3]:boss.attack%3;boss.phase='tell';boss.timer=boss.pattern===0?.85:boss.stage===2?.5:.65;boss.heavy=boss.pattern===0;boss.face=Math.sign(player.x-boss.x)||-1;boss.chain=0;}
       else if(boss.phase==='tell'&&boss.timer<=0){boss.phase=boss.heavy?'sweep':'charge';boss.timer=boss.heavy?.26:.35;tone(95,.15,'sawtooth');}
       else if(boss.phase==='charge'||boss.phase==='sweep'){
         if(boss.phase==='charge')boss.x=clamp(boss.x+boss.face*460*dt,left+30,right-80);
         const range=boss.heavy?180:35;
         if(overlap({x:boss.x-range,y:boss.heavy?FLOOR-42:boss.y+18,w:boss.w+range*2,h:boss.heavy?42:boss.h-18},player))hurt(1,boss.x,'The King predicted your next step.',{source:boss,heavy:boss.heavy});
-        if(boss.timer<=0){if(boss.pattern===2&&boss.chain===0){boss.chain=1;boss.phase='tell';boss.timer=.30;boss.face=Math.sign(player.x-boss.x)||-1;}else{boss.phase='idle';boss.timer=1.1;boss.exposed=.9;}}
+        if(boss.timer<=0){if(boss.pattern===2&&boss.chain<(boss.stage===2?2:1)){boss.chain++;boss.phase='tell';boss.timer=boss.stage===2?.38:.30;boss.face=Math.sign(player.x-boss.x)||-1;}else{boss.phase='idle';boss.timer=1.1;boss.exposed=.9;}}
       }
     }else{
       boss.y=FLOOR-112+Math.sin(roomTime*1.8)*9;
       if(boss.phase==='idle'&&boss.timer<=0){boss.phase='tell';boss.timer=.9;boss.targetX=player.x;boss.heavy=boss.attack%3===2;}
       else if(boss.phase==='tell'&&boss.timer<=0){
-        boss.phase='idle';boss.timer=2.25;boss.attack++;
+        boss.phase='idle';boss.timer=boss.stage===2?1.8:2.25;boss.attack++;
         if(boss.heavy){for(const dir of [-1,1])shots.push({x:boss.x+30,y:FLOOR-17,vx:dir*245,vy:0,r:13,life:5,friendly:false,color:C.rose,source:boss,heavy:true});}
         else{const dx=player.x-boss.x,dy=player.y-boss.y,d=Math.hypot(dx,dy)||1;for(const angle of [-.20,0,.20])shots.push({x:boss.x+30,y:boss.y+30,vx:(dx/d*Math.cos(angle)-dy/d*Math.sin(angle))*260,vy:(dy/d*Math.cos(angle)+dx/d*Math.sin(angle))*260,r:8,life:4,friendly:false,color:C.cyan,source:boss});}
         shots.push({x:boss.targetX+11,y:160,vx:0,vy:390,r:10,life:1.3,friendly:false,color:boss.heavy?C.rose:C.cyan,heavy:boss.heavy,source:boss});
-        if(boss.attack%2===0&&enemies.length<3){const x=player.x<(left+right)/2?right-110:left+40;const e=enemy(x,'echo',{left:left+20,right:right-40});e.hp=remembered('betrayal')?9:6;enemies.push(e);burst(e.x,e.y,'#bfa1ff',18);}
+        if((boss.attack%2===0||boss.stage===2)&&enemies.filter(e=>e.hp>0).length<3){const x=player.x<(left+right)/2?right-110:left+40;const e=enemy(x,'echo',{left:left+20,right:right-40});e.hp=e.max=remembered('betrayal')?9:6;e.memory=save.archive.length?save.archive[(boss.recallIndex||0)%save.archive.length].id:'return';boss.recallIndex=(boss.recallIndex||0)+1;e.skillCd=1.5;enemies.push(e);burst(e.x,e.y,'#bfa1ff',18);toast(`RECALLED / ${memories[e.memory].short}`);}
       }
     }
   }
   function updateShots(dt) {
     for(const s of shots){
+      s.age=(s.age||0)+dt;s.trailClock=(s.trailClock||0)+dt;
+      s.trail||=[];
+      if(s.trailClock>=.018){s.trailClock=0;s.trail.push({x:s.x,y:s.y});if(s.trail.length>9)s.trail.shift();}
       s.x+=s.vx*dt;s.y+=s.vy*dt;s.life-=dt;
       const box={x:s.x-s.r,y:s.y-s.r,w:s.r*2,h:s.r*2};
       if(s.friendly){
@@ -590,6 +769,7 @@
         const result=hurt(1,s.x,'A signal pierced the body.',{source:s.source,heavy:s.heavy});
         if(result==='parry'){
           s.friendly=true;s.reflected=true;s.damage=4;s.color=C.gold;s.life=2;s.r=8;
+          s.trail=[];
           const tx=s.source&&s.source.hp>0?s.source.x+13:player.x+player.dir*300,ty=s.source?s.source.y+18:player.y+20,d=Math.hypot(tx-s.x,ty-s.y)||1;
           s.vx=(tx-s.x)/d*540;s.vy=(ty-s.y)/d*540;
         }else s.life=0;
@@ -607,6 +787,39 @@
     ctx.drawImage(img, sx, sy, sw, sh, -spec.anchor[0] * scale, -spec.anchor[1] * scale, sw * scale, sh * scale);
     ctx.restore(); return true;
   }
+  function drawProjectile(s) {
+    if(s.x<camera-100||s.x>camera+W+100||s.y<cameraY-100||s.y>cameraY+H+100)return;
+    const color=s.reflected?C.gold:s.color,r=s.r,age=s.age||0,angle=Math.atan2(s.vy,s.vx),trail=s.trail||[];
+    ctx.save();ctx.lineCap='round';
+    // Short, fading ribbons follow the real flight path, including aimed shots.
+    for(let i=1;i<trail.length;i++){
+      const strength=i/trail.length;
+      ctx.globalAlpha=strength*.25;line(trail[i-1].x,trail[i-1].y,trail[i].x,trail[i].y,color,r*strength);
+      ctx.globalAlpha=strength*.6;line(trail[i-1].x,trail[i-1].y,trail[i].x,trail[i].y,color,Math.max(1,r*.22*strength));
+    }
+    ctx.globalAlpha=1;glow(s.x,s.y,r*3.6,color,.20);
+    ctx.translate(s.x,s.y);ctx.rotate(angle);
+    if(s.heavy){
+      // Crimson recall: a dark core held inside a broken, rotating crown.
+      ctx.fillStyle='#281021';ctx.beginPath();ctx.arc(0,0,r*.85,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle=color;ctx.lineWidth=2;
+      for(let i=0;i<3;i++){
+        const a=age*4+i*Math.PI*2/3;ctx.beginPath();ctx.arc(0,0,r+2,a,a+1.35);ctx.stroke();
+        polygon([[Math.cos(a)*(r+3),Math.sin(a)*(r+3)],[Math.cos(a+.18)*(r+8),Math.sin(a+.18)*(r+8)],[Math.cos(a+.35)*(r+3),Math.sin(a+.35)*(r+3)]],color);
+      }
+      polygon([[r*.8,0],[0,-r*.6],[-r*.55,0],[0,r*.6]],color);
+      line(-r*.23,0,r*.38,0,C.white,2);
+    }else{
+      // Faceted signal bolt with a luminous tip and two floating stabilizers.
+      polygon([[r*1.4,0],[-r*.15,-r*.75],[-r*.9,0],[-r*.15,r*.75]],color);
+      polygon([[r*1.18,0],[-r*.1,-r*.32],[-r*.48,0],[-r*.1,r*.32]],C.white);
+      line(-r*.8,-r*.85,-r*1.45,-r*.5,color,1.3);line(-r*.8,r*.85,-r*1.45,r*.5,color,1.3);
+      ctx.strokeStyle=color;ctx.lineWidth=1;ctx.globalAlpha=.65;
+      ctx.beginPath();ctx.ellipse(-r*.2,0,r*.45,r*1.1,.2*Math.sin(age*10),-.9,2.3);ctx.stroke();
+      if(s.reflected){ctx.globalAlpha=.9;line(-r*2,0,-r*.8,0,C.white,2);}
+    }
+    ctx.restore();
+  }
   function drawPlayer(x, y, alpha = 1, echo = false) {
     const poses=art.player?.states||{idle:[0,1,2,3],run:[4,5,6,7,8,9,10,11],jump:[12],attack:[13,14,15],guard:[13]};
     let frame=poses.idle[Math.floor(clock*4)%poses.idle.length];
@@ -615,6 +828,8 @@
     const swing=player.attackVisual>0?1-player.attackVisual/(player.attackDuration||.22):0;
     if (player.attackVisual > 0) frame = poses.attack[clamp(Math.floor(swing*poses.attack.length),0,poses.attack.length-1)];
     if (player.guardCharge>.3 || player.counter>0 || player.parry>0) frame=(poses.guard||poses.attack)[player.counter>0?1:0];
+    const restPose=player.rest?clamp(player.rest.time/.45,0,1):player.standUp>0?player.standUp/.22:0;
+    if(!echo&&restPose>0&&poses.rest){frame=poses.rest[Math.min(poses.rest.length-1,Math.floor(restPose*poses.rest.length))];if(restPose===1)y+=Math.sin(clock*2)*.35;}
     if (!echo) { ctx.fillStyle = '#070e1680'; ctx.beginPath(); ctx.ellipse(x + 11, y + 41, 15, 3, 0, 0, Math.PI * 2); ctx.fill(); }
     ctx.save();ctx.translate(x+11,y+player.h);
     const squash=(player.landing||0)/.16,lean=player.dash>0?.16:player.attackVisual>0?Math.sin(swing*Math.PI)*.10:clamp(player.vx/265,-1,1)*.025;
@@ -625,6 +840,7 @@
     ctx.restore();
   }
   function enemyPose(e) {
+    if(e.guarding)return 4;
     if(e.stagger>0||e.phase==='recover')return 7;
     if(e.phase==='windup'||e.phase==='tell')return e.timer>.3?4:5;
     if(['strike','charge','sweep'].includes(e.phase))return 6;
@@ -635,6 +851,7 @@
     const x=(e.prevX??e.x)+(e.x-(e.prevX??e.x))*renderAlpha,y=(e.prevY??e.y)+(e.y-(e.prevY??e.y))*renderAlpha;
     const color=e.type==='lancer'?C.gold:e.type==='echo'?'#c7a5ff':C.cyan;
     ctx.save();ctx.fillStyle='#02091370';ctx.beginPath();ctx.ellipse(x+13,y+e.h+3,e.type==='drone'?17:19,3,0,0,Math.PI*2);ctx.fill();
+    if(e.stagger>0){ctx.translate(x+13,y+e.h);ctx.rotate(-e.dir*Math.min(.24,e.stagger*.65));ctx.translate(-x-13,-y-e.h);}
     if(e.type==='echo'){
       const poses=art.player?.states,run=poses?.run||[4,5,6,7,8,9,10,11];
       glow(x+13,y+18,32,color,.12);drawAsset('player',x+13,y+e.h,art.player?.scale||.34,e.phase==='strike'?(poses?.attack[3]||14):run[Math.floor(clock*run.length*2)%run.length],e.dir,.72);
@@ -651,6 +868,10 @@
       text(e.heavy?'▲':'◇',x+13,y-18,13,c,'center');
     }
     if(e.phase==='strike'){line(x+13-e.dir*30,y+23,x+13+e.dir*35,y+23,e.heavy?C.rose+'aa':C.white+'aa',2);}
+    if(e.guarding||e.blockFlash>0){ctx.strokeStyle=e.blockFlash>0?C.white:C.gold+'aa';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(x+13+e.dir*15,y+17,9,24,0,-Math.PI/2,Math.PI/2);ctx.stroke();}
+    if(e.speech){rect(x-115,y-54,250,23,'#091323dd');text(e.speech,x+10,y-39,9,'#d8c6f2','center');}
+    if(e.memory&&!e.speech)text(memories[e.memory].short,x+13,y-26,8,memories[e.memory].color,'center');
+    if(e.missed&&e.phase==='recover')text('OFF BALANCE',x+13,y-20,8,C.gold,'center');
     if(e.hp<e.max||e.strain>0){rect(x-5,y-9,36,3,'#192a3b');rect(x-5,y-9,36*Math.max(0,e.hp/e.max),3,color);rect(x-5,y-4,36*Math.min(e.hp,e.strain)/e.max,1,C.white);}
     ctx.restore();
   }
@@ -751,12 +972,16 @@
   }
   function drawInteraction(o) {
     const used=chosen.has(o.id),x=o.x,y=o.y;
-    if((o.kind==='cache'||o.kind==='creature')&&used)return;
+    if(['cache','creature','relic'].includes(o.kind)&&used)return;
     let labelY=y-68;
-    if(o.kind==='creature'){
+    if(o.kind==='mirror'){
+      glow(x,y-9,44,C.cyan,.1);polygon([[x,y-43],[x+13,y-9],[x,y+26],[x-13,y-9]],'#507b87');polygon([[x,y-34],[x+8,y-9],[x,y+17],[x-8,y-9]],'#91dedc99');
+    }else if(o.kind==='scar'){
+      glow(x,y+20,24,'#ffa16b',.1);line(x-18,y+21,x+20,y+21,'#856453',2);for(let i=0;i<5;i++)rect(x-12+i*6,y+17+(i%2)*2,3,2,'#9b5b51');
+    }else if(o.kind==='creature'||o.kind==='returned'){
       glow(x,y+12,65,C.gold,.12);polygon([[x-18,y+18],[x-9,y+7],[x+8,y+9],[x+19,y+17]],'#759ba0');rect(x-9,y+5,11,12,'#8cb9ba');rect(x-8,y+7,3,2,C.gold);rect(x-10,y+1,3,7,'#87abae');rect(x-1,y+2,3,7,'#87abae');rect(x+6,y+11,5,5,'#ffa16b');
     }else if(o.kind==='gate'||o.kind==='door'){
-      const base=y+35,open=o.kind==='gate'?doorOpen(o)&&!(bossStarted&&!bossDefeated):did('defiance'),color=o.memory?'#c7a5ff':world.accent;
+      const base=y+35,open=o.kind==='gate'?doorOpen(o)&&!(bossStarted&&!bossDefeated):did('defiance'),color=o.memory==='mercy'?'#91bc8b':o.memory?'#c7a5ff':world.accent;
       if(!drawAsset('arch',x,base,.31)){rect(x-27,base-116,8,116,'#546674');rect(x+19,base-116,8,116,'#546674');rect(x-30,base-121,60,9,'#677986');}
       if(open){glow(x,base-57,85,color,.18);rect(x-17,base-108,34,106,color+'19');for(let i=0;i<6;i++)line(x-14,base-105+((clock*23+i*18)%100),x+14,base-105+((clock*23+i*18)%100),color+'55');}
       else{line(x-19,base-102,x+19,base-13,'#98788c');line(x+19,base-102,x-19,base-13,'#98788c');text(o.memory?'◇':'×',x,base-52,20,'#c9a4bd','center');}
@@ -766,7 +991,7 @@
       polygon([[x,y-27],[x+7,y-14],[x,y-1],[x-7,y-14]],C.cyan);line(x,y-1,x,y+9,C.cyan+'55');
     }else if(o.kind==='lever'){
       rect(x-15,y+24,30,11,'#65737a');line(x,y+24,x+(runFlags[o.flag]?15:-15),y-7,runFlags[o.flag]?C.cyan:C.gold,4);rect(x+(runFlags[o.flag]?10:-21),y-11,12,9,C.gold);
-    }else if(o.kind==='cache'){
+    }else if(o.kind==='cache'||o.kind==='relic'){
       const bob=Math.sin(clock*3)*4;glow(x,y+bob,47,C.gold,.13);polygon([[x,y-15+bob],[x+11,y+bob],[x,y+15+bob],[x-11,y+bob]],C.gold);polygon([[x,y-8+bob],[x+5,y+bob],[x,y+8+bob],[x-5,y+bob]],'#1d3241');
     }else if(o.kind==='choir'){
       glow(x,y-30,170,'#c7a5ff',.24);
@@ -779,6 +1004,32 @@
       drawFigure(x-11,y,o.kind==='keeper'?C.rose:C.cyan,-1,0,o.kind==='keeper'?1:.44,o.kind!=='keeper');if(o.kind!=='keeper')glow(x,y+16,50,C.cyan,.08);
     }
     if(!used&&Math.abs(player.x+11-x)<160&&Math.abs(player.y-y)<190)text(o.label,x,labelY,9,'#bed2dc','center');
+  }
+  function drawLandmarks() {
+    if(zoneId==='cistern'){
+      // Flooded turbines turn behind the pogo route. The water never hides its spikes.
+      for(const x of [445,810,1120]){
+        const y=405;ctx.save();ctx.translate(x,y);ctx.rotate(clock*.16);ctx.strokeStyle='#46657588';ctx.lineWidth=9;ctx.beginPath();ctx.arc(0,0,62,0,Math.PI*2);ctx.stroke();
+        for(let i=0;i<8;i++){ctx.rotate(Math.PI/4);polygon([[14,-6],[53,-15],[56,8],[16,5]],'#344f6088');}ctx.restore();
+        line(x-75,440,x-75,world.top,'#40546366',5);
+      }
+      const water=ctx.createLinearGradient(0,470,0,540);water.addColorStop(0,'#438b962b');water.addColorStop(1,'#0d3f5944');ctx.fillStyle=water;ctx.fillRect(310,478,830,62);
+      for(let i=0;i<18;i++){const x=320+i*46;line(x,480+Math.sin(clock*1.7+i)*2,x+29,480+Math.sin(clock*1.7+i)*2,'#79bac166');}
+    }else if(room===1){
+      for(let i=0;i<7;i++){
+        const x=220+i*186,y=170+(i%3)*45;line(x,world.top,x,y-56,'#82697966',2);
+        const open=did('sacrifice');ctx.strokeStyle=open?'#73f0e755':'#ba829966';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(x,y,25,55,0,0,Math.PI*2);ctx.stroke();
+        if(!open){glow(x,y,45,C.rose,.06);drawFigure(x-11,y-23,'#a786a2',1,0,.3,true);}
+        line(x+25,y,x+40,y+70,'#5c4a6477',3);rect(x-13,y+48,26,8,'#565267');
+      }
+      if(zoneId==='lungs')for(const x of [545,765]){line(x,world.top,x,452,'#4d627155',18);line(x+5,world.top,x+5,452,'#bf899333',2);for(let y=world.top;y<452;y+=70)rect(x-13,y,26,9,'#64738466');}
+    }else if(room===2){
+      for(const p of world.platforms){ctx.strokeStyle='#344d3e';ctx.lineWidth=12;ctx.beginPath();ctx.moveTo(p.x+p.w*.6,460);ctx.bezierCurveTo(p.x-45,360,p.x+p.w+45,p.y+110,p.x+p.w*.5,p.y+15);ctx.stroke();
+        for(let i=0;i<6;i++){const x=p.x+i*p.w/6,y=p.y-5;polygon([[x,y],[x+12,y-10-Math.sin(clock+i)*2],[x+22,y-1]],'#638e6966');}}
+      for(let i=0;i<16;i++){const x=(i*107+clock*7)%world.width,y=120+(i*71)%300;glow(x,y,8,C.gold,.08);rect(x,y,1.5,1.5,C.gold+'88');}
+    }else if(zoneId==='belfry'){
+      line(225,world.top,225,-285,'#7c8b8588',3);ctx.strokeStyle='#86795a';ctx.lineWidth=5;ctx.beginPath();ctx.arc(225,-292,26,Math.PI,0);ctx.stroke();line(197,-292,253,-292,'#ae977066',4);
+    }
   }
   function drawBoss() {
     if(!boss)return;
@@ -811,9 +1062,16 @@
       text(b.type==='king'?'THE KING / A FUTURE WITHOUT CHOICE':'THE MOTHER / A FUTURE WITHOUT END',480,35,10,C.white,'center');
       rect(303,47,354,8,'#08111ccc');rect(305,49,350,4,'#344357');rect(305,49,350*b.hp/b.max,4,c);
       rect(305,56,350*Math.min(b.hp,b.strain||0)/b.max,2,C.cyan);ctx.restore();
+      ctx.save();ctx.translate(viewCamera,viewCameraY);text(b.type==='king'?`PHASE ${b.stage||1} / ${b.stage===2?'BROKEN RHYTHM':'CERTAINTY'} / BREAKS ${b.breaks||0}`:`PHASE ${b.stage||1} / ${b.stage===2?'ARCHIVE RECALL':'PRESERVATION'}`,480,74,8,c,'center');
+      if(b.type==='king')for(let i=0;i<3;i++){const beat=(b.attack||0)%3;polygon([[453+i*27,83],[457+i*27,87],[453+i*27,91],[449+i*27,87]],i===beat?C.white:'#4b5665');}
+      ctx.restore();
     }
   }
   function drawHud() {
+    if(state==='play'&&zoneId==='wake'&&save.loop===1){
+      const objective=!runFlags.learnRest?'Rest at the signal anchor / E':!runFlags.learnMove||!runFlags.learnJump?'Explore the steps / move and jump':!runFlags.learnDeflect?'Deflect the practice warden / F':!decisions.length?'Listen to the wounded creature / E':'Enter the transfer glass, or continue east';
+      rect(18,70,540,27,'#081521cc');text(objective,28,88,10,C.cyan);
+    }
     if(!bossStarted||bossDefeated){text(world.name.split(' / ')[0],27,36,15,'#d2e5ed');text(world.sub,28,54,8,'#7995a6');}
     if(state!=='play')return;
     rect(14,H-62,320,53,'#0b1522dc');
@@ -835,10 +1093,10 @@
   }
   function render() {
     ctx.setTransform(pixelRatio,0,0,pixelRatio,0,0);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-    ctx.save();ctx.clearRect(0,0,W,H);if(shake>0)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
+    ctx.save();ctx.clearRect(0,0,W,H);if(shake>0&&settings.shake>0)ctx.translate((Math.random()-.5)*shake*settings.shake,(Math.random()-.5)*shake*settings.shake);
     viewCamera=camera;viewCameraY=cameraY;drawBackground();ctx.translate(-viewCamera,-viewCameraY);
     if(world){
-      drawArchitecture();
+      drawArchitecture();drawLandmarks();
       for(const p of world.ground)drawPlatform(p,true);for(const p of world.platforms)drawPlatform(p);
       for(const wall of world.solids){drawPlatform(wall,true);line(wall.x+3,wall.y+5,wall.x+3,wall.y+wall.h,'#79a3af');line(wall.x+wall.w-3,wall.y+5,wall.x+wall.w-3,wall.y+wall.h,'#79a3af');for(let y=wall.y+20;y<wall.y+wall.h;y+=38)line(wall.x+7,y,wall.x+wall.w-7,y+8,'#466579');}
       for(const h of world.hazards){glow(h.x+h.w/2,h.y+20,Math.min(200,h.w/2),C.rose,.13);for(let x=h.x;x<h.x+h.w;x+=20)polygon([[x,h.y+h.h],[x+9,h.y],[x+18,h.y+h.h]],'#98728b');}
@@ -846,6 +1104,7 @@
       for(const t of world.tutorials)if(Math.abs(player.x-t.x)<460)text(t.text,t.x,t.y,9,'#9ebcc7','center');
       for(const o of world.interactions)drawInteraction(o);
       if(bossStarted&&!bossDefeated)for(const x of world.arena){line(x,210,x,FLOOR,C.rose+'66',2);glow(x,410,40,C.rose,.08);}
+      for(const e of remnants){ctx.save();ctx.globalAlpha=e.life/.65;ctx.translate(e.x+13,e.y+e.h);ctx.rotate(e.dir*(1-e.life/.65)*1.3);ctx.scale(1,Math.max(.2,e.life/.65));ctx.translate(-e.x-13,-e.y-e.h);drawEnemy(e);ctx.restore();}
       for(const e of enemies)drawEnemy(e);
       drawBoss();
       const mercy=save.archive.find(m=>m.id==='mercy');
@@ -858,7 +1117,7 @@
       if(player.guardCharge>.15||player.attackHold>.2){const charge=player.guardCharge>.15?player.guardCharge/.48:player.attackHold/.55;rect(player.x-7,player.y-12,36,3,'#3d5262');rect(player.x-7,player.y-12,36*Math.min(1,charge),3,charge>=1?C.gold:C.cyan);}
       if(player.focus>0){glow(player.x+11,player.y+20,60,C.cyan,.25);ctx.strokeStyle=C.cyan;ctx.lineWidth=2;ctx.beginPath();ctx.arc(player.x+11,player.y+20,30,-Math.PI/2,-Math.PI/2+player.focus*Math.PI*2);ctx.stroke();}
       if(imprint){const t=imprint.target,cx=t.x+t.w/2,cy=t.y-20;glow(cx,cy,36,C.gold,.2);polygon([[cx,cy-12],[cx+9,cy],[cx,cy+12],[cx-9,cy]],C.gold);text(String(imprint.charge),cx,cy+4,10,'#19272d','center');}
-      for(const s of shots){glow(s.x,s.y,24,s.color,.3);ctx.fillStyle=s.color;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();}
+      for(const s of shots)drawProjectile(s);
       for(const s of slash){
         ctx.save();const progress=1-clamp(s.life/(s.color===C.gold?.25:.18),0,1);ctx.globalAlpha=(1-progress)*.9;
         ctx.translate(s.x,s.y-5);ctx.scale(s.axis==='up'||s.axis==='down'?.65:1,s.axis==='up'||s.axis==='down'?1:.60);ctx.translate(-s.x,-s.y);
@@ -870,31 +1129,48 @@
         ctx.restore();
       }
       for(const p of particles){ctx.globalAlpha=clamp(p.life/p.max,0,1);if(Math.hypot(p.vx,p.vy)>70)line(p.x,p.y,p.x-p.vx*.018,p.y-p.vy*.018,p.color,Math.max(1,p.size*.45));else rect(p.x,p.y,p.size,p.size,p.color);}ctx.globalAlpha=1;
-      const nearby=nearestInteraction();if(nearby&&state==='play'){const label=nearby.kind==='gate'?'ENTER':nearby.kind==='bench'?'REST':nearby.kind==='lever'?'OPEN':nearby.kind==='cache'?'TAKE':'LISTEN';rect(nearby.x-48,nearby.y-60,96,25,'#0c1725ed');ctx.strokeStyle=world.accent+'77';ctx.lineWidth=1;ctx.strokeRect(nearby.x-48,nearby.y-60,96,25);text('[ E ] '+label,nearby.x,nearby.y-43,10,C.white,'center');}
+      const nearby=nearestInteraction();if(nearby&&state==='play'){const label=nearby.kind==='gate'?'ENTER':nearby.kind==='bench'?(player.rest?'STAND':'REST'):nearby.kind==='lever'?'OPEN':nearby.kind==='cache'?'TAKE':'LISTEN';rect(nearby.x-48,nearby.y-60,96,25,'#0c1725ed');ctx.strokeStyle=world.accent+'77';ctx.lineWidth=1;ctx.strokeRect(nearby.x-48,nearby.y-60,96,25);text('[ E ] '+label,nearby.x,nearby.y-43,10,C.white,'center');}
       ctx.translate(viewCamera,viewCameraY);drawHud();
     }
     const vignette=ctx.createRadialGradient(W/2,H/2,180,W/2,H/2,570);vignette.addColorStop(0,'transparent');vignette.addColorStop(1,'#02071177');ctx.fillStyle=vignette;ctx.fillRect(0,0,W,H);
     ctx.restore();
   }
   function frame(now) {
+    pollGamepad();
     const elapsed=lastTime?Math.min(.10,Math.max(0,(now-lastTime)/1000)):STEP;lastTime=now;accumulator+=elapsed;
     while(accumulator>=STEP){update(STEP);accumulator-=STEP;}
     renderAlpha=clamp(accumulator/STEP,0,1);render();requestAnimationFrame(frame);
   }
-  const gameKeys=new Set(['a','d','w','s','arrowleft','arrowright','arrowup','arrowdown',' ','j','x','k','shift','l','c','e','r','f','q','h','m','escape']);
-  window.addEventListener('keydown',e=>{const key=e.key.toLowerCase();if(gameKeys.has(key)&&['play','map','help'].includes(state))e.preventDefault();if(!keys.has(key))pressed.add(key);keys.add(key);});
-  window.addEventListener('keyup',e=>{const key=e.key.toLowerCase();keys.delete(key);released.add(key);if(key===' '&&player?.vy < -220)player.vy=-220;});
-  window.addEventListener('blur',()=>{keys.clear();pressed.clear();if(state==='play')showHelp('play');});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden){keys.clear();pressed.clear();if(state==='play')showHelp('play');}});
-  $('soundBtn').onclick=()=>{sound=!sound;$('soundBtn').textContent=sound?'♪ ON':'♪ OFF';$('soundBtn').setAttribute('aria-pressed',String(sound));tone(660,.15);};
+  window.addEventListener('keydown',e=>{
+    const physical=e.key.toLowerCase();
+    if(bindingCapture){
+      e.preventDefault();if(physical==='escape'){bindingCapture=null;$('bindingStatus').textContent='Binding cancelled.';return;}
+      if(e.ctrlKey||e.metaKey||e.altKey||!(/^[a-z0-9 ;',./\\[\]`=+\-]$/.test(physical)||['shift','arrowleft','arrowright','arrowup','arrowdown'].includes(physical))){$('bindingStatus').textContent='Use a letter, number, punctuation, arrow, Space or Shift.';return;}
+      const other=Object.keys(controls).find(k=>k!==bindingCapture&&(settings.bindings[k]||k)===physical);
+      if(other){$('bindingStatus').textContent=`Already used for ${controls[other]}. Choose another key.`;return;}
+      settings.bindings[bindingCapture]=physical;bindingCapture=null;saveSettings();showSettings(settingsReturn);return;
+    }
+    if(state==='settings'&&document.activeElement?.tagName==='INPUT'&&physical.startsWith('arrow'))return;
+    const key=physical==='escape'?'escape':mappedKey(physical);if(!key)return;
+    if(['play','map','help','settings','archive'].includes(state))e.preventDefault();
+    if(sound&&!audio)tone(40,.01,'sine',.0001);
+    if(!keys.has(key))pressed.add(key);keys.add(key);keyboardHeld.add(key);
+  });
+  window.addEventListener('keyup',e=>{const key=mappedKey(e.key.toLowerCase());if(!key)return;keyboardHeld.delete(key);if(!padHeld.has(key)){keys.delete(key);released.add(key);if(key===' '&&player?.vy < -220)player.vy=-220;}});
+  window.addEventListener('pointerdown',()=>{if(sound&&!audio)tone(40,.01,'sine',.0001);});
+  window.addEventListener('blur',()=>{keyboardHeld.clear();padHeld.clear();keys.clear();pressed.clear();if(state==='play')showHelp('play');});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){keyboardHeld.clear();padHeld.clear();keys.clear();pressed.clear();if(state==='play')showHelp('play');}});
+  $('soundBtn').onclick=()=>{sound=!sound;saveSettings();updateSoundButton();tone(660,.15);};
+  $('settingsBtn').onclick=()=>{if(['play','title','help'].includes(state))showSettings(state);else toast('Finish this dialogue before opening settings.');};
+  updateSoundButton();
   $('helpBtn').onclick=()=>{if(state==='play'||state==='title')showHelp(state);};
   $('soundBtn').setAttribute('aria-label','Toggle game sound');$('helpBtn').setAttribute('aria-label','Show controls');
   player=newPlayer();loadRoom(0);refreshUI();addLog('Awaiting a consciousness. The archive is listening.','THE CHOIR / ONLINE');title();requestAnimationFrame(frame);
 
   // Only exposed when explicitly running the local verification harness.
   if (typeof window.__ECHO_TEST__ === 'function') window.__ECHO_TEST__({
-    frame, update, startRun, loadRoom, enterZone, interact, recordDecision, extract, die, ability, attack, damageBoss, childDialogue, choirDialogue, ending, remembered, beginDeflect, releaseCounter, hurt, imprintAttack, detonate, enemy, movePlayerX, updateShots, doorOpen, showMap,
-    get state(){return state;},get player(){return player;},get world(){return world;},get boss(){return boss;},get save(){return save;},get decisions(){return decisions;},get enemies(){return enemies;},get room(){return room;},get childStage(){return childStage;},get camera(){return camera;},get cameraY(){return cameraY;},get pressed(){return pressed;},get keys(){return keys;},get released(){return released;},get shots(){return shots;},get zoneId(){return zoneId;},get flags(){return runFlags;},get imprint(){return imprint;},get visited(){return visited;},
+    frame, update, checkpointValid, writeCheckpoint, resumeRun, showSettings, pollGamepad, mappedKey, hitEnemy, updateEnemies, updateBoss, startRun, loadRoom, enterZone, interact, recordDecision, extract, die, ability, attack, damageBoss, childDialogue, choirDialogue, ending, remembered, beginDeflect, releaseCounter, hurt, imprintAttack, detonate, enemy, movePlayerX, updateShots, doorOpen, showMap,
+    get settings(){return settings;},get state(){return state;},get player(){return player;},get world(){return world;},get boss(){return boss;},get save(){return save;},get decisions(){return decisions;},get enemies(){return enemies;},get room(){return room;},get childStage(){return childStage;},get camera(){return camera;},get cameraY(){return cameraY;},get pressed(){return pressed;},get keys(){return keys;},get released(){return released;},get shots(){return shots;},get zoneId(){return zoneId;},get flags(){return runFlags;},get imprint(){return imprint;},get visited(){return visited;},
     setSave(value){save={...save,...value};},setState(value){state=value;},render
   });
 })();

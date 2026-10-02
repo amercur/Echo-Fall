@@ -20,5 +20,11 @@ const root=path.join(__dirname,'..');
     game.player.inv=0;
     game.render();fs.writeFileSync(path.join(out,zone+'.png'),canvas.toBuffer('image/png'));
   }
-  console.log('Rendered five gameplay scenes to art-review/.');
+  game.loadRoom('wake');tick(.1);game.interact(game.world.interactions.find(o=>o.kind==='bench'));tick(.6);game.player.inv=0;game.render();
+  fs.writeFileSync(path.join(out,'bench-rest.png'),canvas.toBuffer('image/png'));
+  game.loadRoom('mother');game.player.inv=100;
+  for(const [x,y,heavy,vx,vy] of [[450,250,false,180,0],[680,260,true,-160,0],[820,170,false,0,180]])game.shots.push({x,y,vx,vy,r:heavy?13:8,heavy,life:4,color:heavy?'#ff6f91':'#73f0e7',friendly:false});
+  for(let i=0;i<30;i++)game.updateShots(1/120);game.player.inv=0;game.render();
+  fs.writeFileSync(path.join(out,'projectiles.png'),canvas.toBuffer('image/png'));
+  console.log('Rendered gameplay scenes, bench rest, and projectile details to art-review/.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
